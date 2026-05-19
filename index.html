@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#0f1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>MarketMap — Inteligência Comercial</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0b0d13;
+  --bg2: #111520;
+  --bg3: #161c2d;
+  --surface: #1a2035;
+  --surface2: #1f2840;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --accent: #3b82f6;
+  --accent2: #60a5fa;
+  --green: #22c55e;
+  --green2: #4ade80;
+  --red: #ef4444;
+  --amber: #f59e0b;
+  --purple: #a855f7;
+  --text: #f1f5f9;
+  --text2: #94a3b8;
+  --text3: #64748b;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+a{color:var(--accent2);text-decoration:none}
+
+.screen{display:none;min-height:100vh}
+.screen.active{display:flex}
+
+#screen-login{align-items:center;justify-content:center;background:radial-gradient(ellipse at 30% 20%,rgba(59,130,246,0.08) 0%,transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(168,85,247,0.06) 0%,transparent 50%),var(--bg)}
+.login-box{width:100%;max-width:420px;padding:2.5rem;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg)}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:2rem}
+.logo-icon{width:40px;height:40px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.logo-text{font-size:22px;font-weight:700;letter-spacing:-0.5px}
+.logo-sub{font-size:12px;color:var(--text3);letter-spacing:1px;text-transform:uppercase}
+.field-label{font-size:12px;color:var(--text2);margin-bottom:6px;font-weight:500;letter-spacing:0.5px;text-transform:uppercase}
+.field-input{width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:11px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color 0.2s}
+.field-input:focus{border-color:var(--accent)}
+.field-group{margin-bottom:1rem}
+.btn-primary{width:100%;padding:12px;background:var(--accent);border:none;border-radius:var(--radius);color:#fff;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;transition:opacity 0.2s;margin-top:0.5rem}
+.btn-primary:hover{opacity:0.85}
+.login-err{color:var(--red);font-size:13px;margin-top:0.5rem;display:none}
+
+#screen-app{flex-direction:column}
+.topbar{height:56px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1rem;gap:0.75rem;position:sticky;top:0;z-index:100;flex-shrink:0}
+.topbar-logo{font-weight:700;font-size:16px;letter-spacing:-0.5px;color:var(--text);margin-right:auto}
+.topbar-logo span{color:var(--accent)}
+.topbar-user{font-size:13px;color:var(--text2)}
+.btn-icon{background:none;border:1px solid var(--border2);border-radius:8px;color:var(--text2);padding:6px 10px;cursor:pointer;font-size:13px;font-family:inherit;transition:all 0.2s;display:flex;align-items:center;gap:6px}
+.btn-icon:hover{background:var(--surface);color:var(--text)}
+
+.tabs-row{display:flex;background:var(--bg2);border-bottom:1px solid var(--border);padding:0 1rem;gap:0;overflow-x:auto;flex-shrink:0}
+.tab-btn{padding:12px 16px;font-size:13px;font-weight:500;color:var(--text3);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all 0.2s}
+.tab-btn.active{color:var(--accent2);border-bottom-color:var(--accent)}
+.tab-btn:hover{color:var(--text2)}
+.tab-content{display:none;flex:1;overflow:hidden}
+.tab-content.active{display:flex;flex-direction:column}
+
+.map-container{flex:1;position:relative;overflow:hidden}
+#google-map{width:100%;height:100%}
+.map-sidebar{width:340px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.map-wrap{display:flex;flex:1;overflow:hidden}
+.sidebar-header{padding:1rem;border-bottom:1px solid var(--border)}
+.sidebar-title{font-size:14px;font-weight:600}
+.sidebar-sub{font-size:12px;color:var(--text3);margin-top:2px}
+.company-list{flex:1;overflow-y:auto;padding:0.5rem}
+.company-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:0.75rem;margin-bottom:0.5rem;cursor:pointer;transition:all 0.2s;position:relative}
+.company-card:hover{border-color:var(--border2);background:var(--surface2)}
+.company-card.mapped{border-left:3px solid var(--green)}
+.company-name{font-size:13px;font-weight:600;margin-bottom:2px}
+.company-addr{font-size:11px;color:var(--text3)}
+.company-tags{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+.tag{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500}
+.tag-system{background:rgba(59,130,246,0.15);color:var(--accent2)}
+.tag-status{background:rgba(245,158,11,0.15);color:var(--amber)}
+.tag-none{background:var(--surface2);color:var(--text3)}
+.map-legend{position:absolute;bottom:20px;left:20px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:1rem;z-index:50;box-shadow:var(--shadow)}
+.legend-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);margin-bottom:8px}
+.legend-item:last-child{margin-bottom:0}
+.legend-dot{width:12px;height:12px;border-radius:50%}
+.legend-dot.green{background:var(--green)}
+.legend-dot.red{background:var(--red)}
+.map-controls{padding:0.75rem;border-bottom:1px solid var(--border);display:flex;gap:0.5rem;flex-wrap:wrap}
+.btn-sm{padding:5px 10px;font-size:12px;background:var(--surface);border:1px solid var(--border2);border-radius:6px;color:var(--text2);cursor:pointer;font-family:inherit;transition:all 0.2s}
+.btn-sm:hover{background:var(--surface2);color:var(--text)}
+.btn-sm.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.search-bar{padding:0.75rem;border-bottom:1px solid var(--border);display:flex;gap:0.5rem}
+.search-input{flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius);padding:8px 12px;color:var(--text);font-size:13px;font-family:inherit;outline:none}
+.search-input:focus{border-color:var(--accent)}
+
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:1000}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);width:90%;max-width:500px;max-height:85vh;overflow-y:auto;box-shadow:var(--shadow)}
+.modal-header{padding:1.5rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.modal-title{font-size:16px;font-weight:600}
+.modal-close{background:none;border:none;color:var(--text2);font-size:24px;cursor:pointer;padding:0;width:24px;height:24px;display:flex;align-items:center;justify-content:center}
+.modal-close:hover{color:var(--text)}
+.modal-body{padding:1.5rem;display:flex;flex-direction:column;gap:1rem}
+.modal-footer{padding:1.5rem;border-top:1px solid var(--border);display:flex;gap:0.75rem;justify-content:flex-end;flex-shrink:0}
+.btn-secondary{padding:10px 16px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text2);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:all 0.2s}
+.btn-secondary:hover{background:var(--surface);color:var(--text)}
+.btn-accent{padding:10px 16px;background:var(--accent);border:none;border-radius:var(--radius);color:#fff;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:opacity 0.2s}
+.btn-accent:hover{opacity:0.85}
+
+.notif{position:fixed;bottom:20px;right:20px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:1rem 1.5rem;color:var(--text);font-size:13px;z-index:2000;box-shadow:var(--shadow);display:none;max-width:300px;animation:slideIn 0.3s ease-out}
+.notif.show{display:block}
+.notif.success{border-left:3px solid var(--green)}
+.notif.error{border-left:3px solid var(--red)}
+.notif.info{border-left:3px solid var(--accent)}
+@keyframes slideIn{from{transform:translateX(400px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="screen-login" class="screen active">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="logo-icon">📍</div>
+      <div>
+        <div class="logo-text">Market<span style="color:var(--accent)">Map</span></div>
+        <div class="logo-sub">Inteligência Comercial</div>
+      </div>
+    </div>
+    <div id="apikey-group" class="field-group" style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);border-radius:10px;padding:12px;margin-bottom:1rem">
+      <div class="field-label" style="color:var(--accent2)">🔑 Chave Google Maps API</div>
+      <input type="text" id="login-apikey" class="field-input" placeholder="AIzaSy... (cole sua chave aqui)" autocomplete="off" style="font-family:monospace;font-size:12px">
+      <div style="font-size:11px;color:var(--text3);margin-top:5px">Salva automaticamente. Só precisa digitar uma vez.</div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">E-mail</div>
+      <input type="email" id="login-email" class="field-input" placeholder="seu@email.com" autocomplete="email">
+    </div>
+    <div class="field-group">
+      <div class="field-label">Senha</div>
+      <input type="password" id="login-pass" class="field-input" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <div id="login-err" class="login-err">E-mail ou senha inválidos.</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:0.75rem">
+      <input type="checkbox" id="keep-logged" style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent)">
+      <label for="keep-logged" style="font-size:13px;color:var(--text2);cursor:pointer">Manter conectado</label>
+    </div>
+    <button class="btn-primary" onclick="doLogin()">Entrar</button>
+    <p style="font-size:12px;color:var(--text3);margin-top:1.5rem;text-align:center">MarketMap v3.0 · Google Places API v2</p>
+  </div>
+</div>
+
+<!-- APP SCREEN -->
+<div id="screen-app" class="screen">
+  <div class="topbar">
+    <div class="topbar-logo">Market<span>Map</span></div>
+    <span class="topbar-user" id="topbar-user"></span>
+    <button class="btn-icon" onclick="doLogout()">🚪 Sair</button>
+  </div>
+
+  <div class="tabs-row">
+    <button class="tab-btn active" onclick="switchTab('map',this)">🗺 Mapa</button>
+    <button class="tab-btn" onclick="switchTab('users',this)">👥 Usuários</button>
+    <button class="tab-btn" onclick="switchTab('reports',this)">📊 Relatórios</button>
+  </div>
+
+  <div class="tab-content active" id="map-tab">
+    <div class="map-wrap">
+      <div class="map-container">
+        <div id="google-map"></div>
+        <div class="map-legend">
+          <div class="legend-item"><div class="legend-dot green"></div> Mapeadas</div>
+          <div class="legend-item"><div class="legend-dot red"></div> Não Mapeadas</div>
+        </div>
+      </div>
+      <div class="map-sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-title">🔍 Buscar Empresas</div>
+          <div class="sidebar-sub">Pesquise por cidade e tipo</div>
+        </div>
+        <div class="search-bar">
+          <input type="text" id="search-city" class="search-input" placeholder="Digite uma cidade...">
+          <button class="btn-sm" onclick="searchBusinesses()" style="flex:0.6">🔎</button>
+        </div>
+        <div class="map-controls">
+          <button class="btn-sm active" onclick="filterByStatus('',this)">Todas</button>
+          <button class="btn-sm" onclick="filterByStatus('prospect',this)">Prospect</button>
+          <button class="btn-sm" onclick="filterByStatus('contacted',this)">Contatado</button>
+          <button class="btn-sm" onclick="filterByStatus('interested',this)">Interessado</button>
+          <button class="btn-sm" onclick="filterByStatus('customer',this)">Cliente</button>
+        </div>
+        <div class="company-list" id="company-list">
+          <div style="padding:1rem;color:var(--text3);text-align:center;font-size:12px">
+            Digite uma cidade e clique em Buscar
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="users-tab">
+    <div style="padding:2rem;color:var(--text3);text-align:center">
+      <p>Funcionalidade em desenvolvimento...</p>
+    </div>
+  </div>
+
+  <div class="tab-content" id="reports-tab">
+    <div style="padding:2rem;color:var(--text3);text-align:center">
+      <p>Funcionalidade em desenvolvimento...</p>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Adicionar Empresa</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-group">
+        <div class="field-label">Nome da Empresa</div>
+        <input type="text" id="modal-company-name" class="field-input" readonly>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Endereço</div>
+        <input type="text" id="modal-company-addr" class="field-input" readonly>
+      </div>
+      <div class="field-group">
+        <div class="field-label">⚙️ Sistema Utilizado *</div>
+        <input type="text" id="modal-system" class="field-input" placeholder="Ex: SAP, Omie, Nuvem Fiscal...">
+      </div>
+      <div class="field-group">
+        <div class="field-label">👤 Contador Responsável *</div>
+        <input type="text" id="modal-counter" class="field-input" placeholder="Nome do contador">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Status</div>
+        <select id="modal-status" class="field-input">
+          <option value="prospect">Prospect</option>
+          <option value="contacted">Contatado</option>
+          <option value="interested">Interessado</option>
+          <option value="customer">Cliente</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn-accent" onclick="saveCompany()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- NOTIFICATION -->
+<div class="notif" id="notif"></div>
+
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAVvWl7gvSMY05qqT4Nhy99k82ddJSB7ZA&libraries=places,geometry&callback=window.initGoogleMap"></script>
+
+<script>
+let map, geocoder, currentMarkers = [];
+let currentCompany = null;
+let companies = JSON.parse(localStorage.getItem('mm_companies')) || [];
+let apiKey = localStorage.getItem('mm_gkey') || '';
+let searchResults = [];
+let currentFilter = '';
+let placesService = null;
+
+function doLogin() {
+  const apikey = document.getElementById('login-apikey').value.trim();
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value.trim();
+  
+  if (!apikey || !email || !pass) {
+    showNotif('Preencha todos os campos', 'error');
+    return;
+  }
+  
+  if (!apikey.startsWith('AIza')) {
+    showNotif('Chave inválida. Deve começar com "AIza"', 'error');
+    return;
+  }
+  
+  localStorage.setItem('mm_gkey', apikey);
+  localStorage.setItem('mm_user', email);
+  localStorage.setItem('mm_logged', 'true');
+  
+  apiKey = apikey;
+  reloadGoogleMaps();
+}
+
+function reloadGoogleMaps() {
+  const script = document.createElement('script');
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&callback=window.initGoogleMap`;
+  script.async = true;
+  script.defer = true;
+  script.onerror = () => {
+    showNotif('Erro ao carregar Google Maps. Verifique sua chave.', 'error');
+  };
+  document.head.appendChild(script);
+}
+
+window.initGoogleMap = function() {
+  if (!window.google) {
+    showNotif('Google Maps não carregou', 'error');
+    return;
+  }
+  
+  document.getElementById('screen-login').classList.remove('active');
+  document.getElementById('screen-app').classList.add('active');
+  document.getElementById('topbar-user').textContent = localStorage.getItem('mm_user');
+  
+  const defaultLocation = { lat: -15.7942, lng: -47.8822 };
+  map = new google.maps.Map(document.getElementById('google-map'), {
+    zoom: 5,
+    center: defaultLocation,
+    mapTypeControl: true,
+    fullscreenControl: true,
+    streetViewControl: false,
+    styles: getDarkMapStyle()
+  });
+  
+  placesService = new google.maps.places.PlacesService(map);
+  geocoder = new google.maps.Geocoder();
+  
+  loadCompaniesOnMap();
+};
+
+function searchBusinesses() {
+  const city = document.getElementById('search-city').value.trim();
+  
+  if (!city) {
+    showNotif('Digite uma cidade', 'error');
+    return;
+  }
+  
+  clearMarkers();
+  
+  geocoder.geocode({ address: city + ', Brasil' }, (results, status) => {
+    if (status === 'OK') {
+      const location = results[0].geometry.location;
+      map.setCenter(location);
+      map.setZoom(13);
+      
+      const request = {
+        location: location,
+        radius: 5000,
+        type: 'point_of_interest',
+        language: 'pt-BR'
+      };
+      
+      placesService.nearbySearch(request, (results, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK) {
+          searchResults = results;
+          displayBusinesses(results);
+        } else {
+          showNotif('Nenhuma empresa encontrada', 'info');
+        }
+      });
+    } else {
+      showNotif('Cidade não encontrada', 'error');
+    }
+  });
+}
+
+function displayBusinesses(results) {
+  const list = document.getElementById('company-list');
+  list.innerHTML = '';
+  
+  results.forEach(place => {
+    const card = document.createElement('div');
+    card.className = 'company-card';
+    card.setAttribute('data-place-id', place.place_id);
+    
+    const existing = companies.find(c => c.placeId === place.place_id);
+    if (existing) {
+      card.classList.add('mapped');
+    }
+    
+    const statusTag = existing ? `<span class="tag tag-status">${getStatusLabel(existing.status)}</span>` : '<span class="tag tag-none">Não mapeada</span>';
+    const systemTag = existing ? `<span class="tag tag-system">⚙️ ${existing.system}</span>` : '';
+    
+    card.innerHTML = `
+      <div class="company-name">${place.name}</div>
+      <div class="company-addr">${place.vicinity}</div>
+      <div class="company-tags">
+        ${statusTag}
+        ${systemTag}
+      </div>
+    `;
+    
+    card.onclick = () => openCompanyModal(place);
+    list.appendChild(card);
+    
+    const marker = new google.maps.Marker({
+      position: place.geometry.location,
+      map: map,
+      title: place.name,
+      icon: existing ? '🟢' : '🔴'
+    });
+    
+    marker.addListener('click', () => openCompanyModal(place));
+    currentMarkers.push(marker);
+  });
+}
+
+function openCompanyModal(place) {
+  currentCompany = place;
+  const existing = companies.find(c => c.placeId === place.place_id);
+  
+  document.getElementById('modal-company-name').value = place.name;
+  document.getElementById('modal-company-addr').value = place.vicinity;
+  document.getElementById('modal-system').value = existing ? existing.system : '';
+  document.getElementById('modal-counter').value = existing ? existing.counter : '';
+  document.getElementById('modal-status').value = existing ? existing.status : 'prospect';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  currentCompany = null;
+}
+
+function saveCompany() {
+  if (!currentCompany) return;
+  
+  const system = document.getElementById('modal-system').value.trim();
+  const counter = document.getElementById('modal-counter').value.trim();
+  const status = document.getElementById('modal-status').value;
+  
+  if (!system || !counter) {
+    showNotif('Preencha sistema e contador', 'error');
+    return;
+  }
+  
+  const company = {
+    placeId: currentCompany.place_id,
+    name: currentCompany.name,
+    address: currentCompany.vicinity,
+    lat: currentCompany.geometry.location.lat(),
+    lng: currentCompany.geometry.location.lng(),
+    system: system,
+    counter: counter,
+    status: status,
+    timestamp: new Date().toISOString()
+  };
+  
+  const existing = companies.findIndex(c => c.placeId === company.placeId);
+  if (existing >= 0) {
+    companies[existing] = company;
+  } else {
+    companies.push(company);
+  }
+  
+  localStorage.setItem('mm_companies', JSON.stringify(companies));
+  closeModal();
+  showNotif('✅ Empresa salva com sucesso!', 'success');
+  displayBusinesses(searchResults);
+  loadCompaniesOnMap();
+}
+
+function loadCompaniesOnMap() {
+  clearMarkers();
+  companies.forEach(company => {
+    const marker = new google.maps.Marker({
+      position: { lat: company.lat, lng: company.lng },
+      map: map,
+      title: company.name,
+      icon: '🟢'
+    });
+    
+    marker.addListener('click', () => {
+      const comp = companies.find(c => c.placeId === company.placeId);
+      if (comp) {
+        currentCompany = {
+          place_id: comp.placeId,
+          name: comp.name,
+          vicinity: comp.address,
+          geometry: { location: { lat: () => comp.lat, lng: () => comp.lng } }
+        };
+        openCompanyModal(currentCompany);
+      }
+    });
+    
+    currentMarkers.push(marker);
+  });
+}
+
+function clearMarkers() {
+  currentMarkers.forEach(marker => marker.setMap(null));
+  currentMarkers = [];
+}
+
+function filterByStatus(status, btn) {
+  currentFilter = status;
+  
+  document.querySelectorAll('.map-controls .btn-sm').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  
+  const list = document.getElementById('company-list');
+  const cards = list.querySelectorAll('.company-card');
+  
+  cards.forEach(card => {
+    if (!status) {
+      card.style.display = 'block';
+    } else {
+      const placeId = card.getAttribute('data-place-id');
+      const comp = companies.find(c => c.placeId === placeId);
+      card.style.display = (comp && comp.status === status) ? 'block' : 'none';
+    }
+  });
+}
+
+function getStatusLabel(status) {
+  const labels = {
+    'prospect': 'Prospect',
+    'contacted': 'Contatado',
+    'interested': 'Interessado',
+    'customer': 'Cliente'
+  };
+  return labels[status] || status;
+}
+
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(tab + '-tab').classList.add('active');
+}
+
+function doLogout() {
+  localStorage.removeItem('mm_logged');
+  location.reload();
+}
+
+function showNotif(msg, type = 'info') {
+  const notif = document.getElementById('notif');
+  notif.textContent = msg;
+  notif.className = `notif show ${type}`;
+  setTimeout(() => notif.classList.remove('show'), 3000);
+}
+
+function getDarkMapStyle() {
+  return [
+    { elementType: 'geometry', stylers: [{ color: '#242f3e' }] },
+    { elementType: 'labels.text.stroke', stylers: [{ color: '#242f3e' }] },
+    { elementType: 'labels.text.fill', stylers: [{ color: '#746855' }] },
+    { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
+    { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
+    { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#263c3f' }] },
+    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#38414e' }] },
+    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#212a37' }] },
+    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#746855' }] },
+    { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#1f2835' }] },
+    { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#f3751ff' }] },
+    { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#2f3948' }] },
+    { featureType: 'transit.station', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
+    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#17263c' }] },
+    { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#515c6d' }] },
+    { featureType: 'water', elementType: 'labels.text.stroke', stylers: [{ color: '#17263c' }] }
+  ];
+}
+
+if (localStorage.getItem('mm_logged')) {
+  apiKey = localStorage.getItem('mm_gkey');
+  reloadGoogleMaps();
+}
+</script>
+
+</body>
+</html>
