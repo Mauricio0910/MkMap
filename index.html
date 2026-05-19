@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#0f1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>MarketMap — Inteligência Comercial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0b0d13;
+  --bg2: #111520;
+  --bg3: #161c2d;
+  --surface: #1a2035;
+  --surface2: #1f2840;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --accent: #3b82f6;
+  --accent2: #60a5fa;
+  --green: #22c55e;
+  --green2: #4ade80;
+  --red: #ef4444;
+  --amber: #f59e0b;
+  --purple: #a855f7;
+  --text: #f1f5f9;
+  --text2: #94a3b8;
+  --text3: #64748b;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+a{color:var(--accent2);text-decoration:none}
+
+.screen{display:none;min-height:100vh}
+.screen.active{display:flex}
+
+#screen-login{align-items:center;justify-content:center;background:radial-gradient(ellipse at 30% 20%,rgba(59,130,246,0.08) 0%,transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(168,85,247,0.06) 0%,transparent 50%),var(--bg)}
+.login-box{width:100%;max-width:420px;padding:2.5rem;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg)}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:2rem}
+.logo-icon{width:40px;height:40px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.logo-text{font-size:22px;font-weight:700;letter-spacing:-0.5px}
+.logo-sub{font-size:12px;color:var(--text3);letter-spacing:1px;text-transform:uppercase}
+.field-label{font-size:12px;color:var(--text2);margin-bottom:6px;font-weight:500;letter-spacing:0.5px;text-transform:uppercase}
+.field-input{width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:11px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color 0.2s}
+.field-input:focus{border-color:var(--accent)}
+.field-group{margin-bottom:1rem}
+.btn-primary{width:100%;padding:12px;background:var(--accent);border:none;border-radius:var(--radius);color:#fff;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;transition:opacity 0.2s;margin-top:0.5rem}
+.btn-primary:hover{opacity:0.85}
+.login-err{color:var(--red);font-size:13px;margin-top:0.5rem;display:none}
+.loading-spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-radius:50%;border-top-color:#fff;animation:spin 0.6s linear infinite;vertical-align:middle;margin-left:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+#screen-app{flex-direction:column}
+.topbar{height:56px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1rem;gap:0.75rem;position:sticky;top:0;z-index:100;flex-shrink:0}
+.topbar-logo{font-weight:700;font-size:16px;letter-spacing:-0.5px;color:var(--text);margin-right:auto}
+.topbar-logo span{color:var(--accent)}
+.topbar-user{font-size:13px;color:var(--text2)}
+.btn-icon{background:none;border:1px solid var(--border2);border-radius:8px;color:var(--text2);padding:6px 10px;cursor:pointer;font-size:13px;font-family:inherit;transition:all 0.2s;display:flex;align-items:center;gap:6px}
+.btn-icon:hover{background:var(--surface);color:var(--text)}
+
+.tabs-row{display:flex;background:var(--bg2);border-bottom:1px solid var(--border);padding:0 1rem;gap:0;overflow-x:auto;flex-shrink:0}
+.tab-btn{padding:12px 16px;font-size:13px;font-weight:500;color:var(--text3);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all 0.2s}
+.tab-btn.active{color:var(--accent2);border-bottom-color:var(--accent)}
+.tab-btn:hover{color:var(--text2)}
+.tab-content{display:none;flex:1;overflow:hidden}
+.tab-content.active{display:flex;flex-direction:column}
+
+.map-container{flex:1;position:relative;overflow:hidden}
+#google-map{width:100%;height:100%}
+.map-sidebar{width:400px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.map-wrap{display:flex;flex:1;overflow:hidden}
+.sidebar-header{padding:1rem;border-bottom:1px solid var(--border)}
+.sidebar-title{font-size:14px;font-weight:600}
+.sidebar-sub{font-size:12px;color:var(--text3);margin-top:2px}
+.company-list{flex:1;overflow-y:auto;padding:0.5rem}
+.company-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:0.75rem;margin-bottom:0.5rem;cursor:pointer;transition:all 0.2s;position:relative}
+.company-card:hover{border-color:var(--border2);background:var(--surface2)}
+.company-card.mapped{border-left:3px solid var(--green)}
+.company-name{font-size:13px;font-weight:600;margin-bottom:2px}
+.company-addr{font-size:11px;color:var(--text3)}
+.company-tags{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+.tag{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500}
+.tag-system{background:rgba(59,130,246,0.15);color:var(--accent2)}
+.tag-counter{background:rgba(168,85,247,0.15);color:var(--purple)}
+.tag-status{background:rgba(245,158,11,0.15);color:var(--amber)}
+.tag-concorrente{background:rgba(239,68,68,0.15);color:var(--red)}
+.tag-none{background:var(--surface2);color:var(--text3)}
+.map-legend{position:absolute;bottom:20px;left:20px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:1rem;z-index:50;box-shadow:var(--shadow)}
+.legend-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);margin-bottom:8px}
+.legend-item:last-child{margin-bottom:0}
+.legend-dot{width:12px;height:12px;border-radius:50%}
+.legend-dot.green{background:var(--green)}
+.legend-dot.red{background:var(--red)}
+.legend-dot.blue{background:var(--accent)}
+.map-controls{padding:0.75rem;border-bottom:1px solid var(--border);display:flex;gap:0.5rem;flex-wrap:wrap}
+.btn-sm{padding:5px 10px;font-size:12px;background:var(--surface);border:1px solid var(--border2);border-radius:6px;color:var(--text2);cursor:pointer;font-family:inherit;transition:all 0.2s}
+.btn-sm:hover{background:var(--surface2);color:var(--text)}
+.btn-sm.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.search-bar{padding:0.75rem;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:0.5rem}
+.search-row{display:flex;gap:0.5rem}
+.search-input{flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius);padding:8px 12px;color:var(--text);font-size:13px;font-family:inherit;outline:none}
+.search-input:focus{border-color:var(--accent)}
+.btn-search{background:var(--accent);border:none;border-radius:var(--radius);padding:8px 16px;color:#fff;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:opacity 0.2s}
+.btn-search:hover{opacity:0.85}
+.search-type{display:flex;gap:1rem;padding:0 0 0.5rem 0}
+.search-type label{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:5px;cursor:pointer}
+
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:1000}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);width:90%;max-width:500px;max-height:85vh;overflow-y:auto;box-shadow:var(--shadow)}
+.modal-header{padding:1.5rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.modal-title{font-size:16px;font-weight:600}
+.modal-close{background:none;border:none;color:var(--text2);font-size:24px;cursor:pointer;padding:0;width:24px;height:24px;display:flex;align-items:center;justify-content:center}
+.modal-close:hover{color:var(--text)}
+.modal-body{padding:1.5rem;display:flex;flex-direction:column;gap:1rem}
+.modal-footer{padding:1.5rem;border-top:1px solid var(--border);display:flex;gap:0.75rem;justify-content:flex-end;flex-shrink:0}
+.btn-secondary{padding:10px 16px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text2);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:all 0.2s}
+.btn-secondary:hover{background:var(--surface);color:var(--text)}
+.btn-accent{padding:10px 16px;background:var(--accent);border:none;border-radius:var(--radius);color:#fff;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:opacity 0.2s}
+.btn-accent:hover{opacity:0.85}
+
+.notif{position:fixed;bottom:20px;right:20px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:1rem 1.5rem;color:var(--text);font-size:13px;z-index:2000;box-shadow:var(--shadow);display:none;max-width:300px;animation:slideIn 0.3s ease-out}
+.notif.show{display:block}
+.notif.success{border-left:3px solid var(--green)}
+.notif.error{border-left:3px solid var(--red)}
+.notif.info{border-left:3px solid var(--accent)}
+@keyframes slideIn{from{transform:translateX(400px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* Relatórios */
+.reports-container{display:flex;flex-direction:column;height:100%;overflow:hidden}
+.reports-filters{background:var(--surface);border-bottom:1px solid var(--border);padding:1rem;display:flex;flex-wrap:wrap;gap:0.75rem;align-items:flex-end}
+.filter-group{display:flex;flex-direction:column;gap:4px;min-width:150px}
+.filter-group label{font-size:11px;color:var(--text3);text-transform:uppercase}
+.filter-select{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:8px 12px;color:var(--text);font-size:13px;font-family:inherit;cursor:pointer}
+.filter-select:focus{border-color:var(--accent);outline:none}
+.btn-filter{background:var(--accent);border:none;border-radius:var(--radius);padding:8px 16px;color:#fff;font-size:12px;font-weight:600;cursor:pointer}
+.btn-filter:hover{opacity:0.85}
+.btn-reset{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:8px 16px;color:var(--text2);font-size:12px;cursor:pointer}
+.btn-reset:hover{background:var(--surface);color:var(--text)}
+.reports-content{flex:1;overflow-y:auto;padding:1rem}
+.report-card{background:var(--surface);border-radius:var(--radius);margin-bottom:1rem;overflow:hidden}
+.report-header{background:var(--surface2);padding:0.75rem 1rem;border-bottom:1px solid var(--border);font-weight:600;font-size:14px}
+.report-body{padding:1rem}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:1rem;margin-bottom:1rem}
+.stat-item{text-align:center;padding:0.75rem;background:var(--bg2);border-radius:var(--radius)}
+.stat-value{font-size:28px;font-weight:700;color:var(--accent2)}
+.stat-label-sm{font-size:11px;color:var(--text3);margin-top:4px}
+.company-list-report{max-height:300px;overflow-y:auto}
+.company-item{display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid var(--border);font-size:12px}
+.company-item:hover{background:var(--surface2)}
+.company-status{width:8px;height:8px;border-radius:50%;margin-right:8px}
+.chart-bar{background:var(--bg2);border-radius:4px;height:24px;margin:4px 0;overflow:hidden}
+.chart-fill{background:var(--accent);height:100%;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;font-size:11px;color:#fff;border-radius:4px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="screen-login" class="screen active">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="logo-icon">📍</div>
+      <div>
+        <div class="logo-text">Market<span style="color:var(--accent)">Map</span></div>
+        <div class="logo-sub">Inteligência Comercial</div>
+      </div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">🔑 Chave Google Maps API</div>
+      <input type="text" id="login-apikey" class="field-input" placeholder="AIzaSy... (cole sua chave aqui)">
+      <div style="font-size:11px;color:var(--text3);margin-top:5px">👉 Ative as APIs: Maps JavaScript e Places API</div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">E-mail</div>
+      <input type="email" id="login-email" class="field-input" placeholder="seu@email.com">
+    </div>
+    <div class="field-group">
+      <div class="field-label">Senha</div>
+      <input type="password" id="login-pass" class="field-input" placeholder="qualquer senha">
+    </div>
+    <div id="login-err" class="login-err"></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:0.75rem">
+      <input type="checkbox" id="keep-logged" style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent)">
+      <label for="keep-logged" style="font-size:13px;color:var(--text2);cursor:pointer">Manter conectado</label>
+    </div>
+    <button class="btn-primary" id="login-btn" onclick="doLogin()">Entrar</button>
+    <p style="font-size:12px;color:var(--text3);margin-top:1.5rem;text-align:center">MarketMap v5.0 · Market Share Intelligence</p>
+  </div>
+</div>
+
+<!-- APP SCREEN -->
+<div id="screen-app" class="screen">
+  <div class="topbar">
+    <div class="topbar-logo">Market<span>Map</span></div>
+    <span class="topbar-user" id="topbar-user"></span>
+    <button class="btn-icon" onclick="doLogout()">🚪 Sair</button>
+  </div>
+
+  <div class="tabs-row">
+    <button class="tab-btn active" onclick="switchTab('map',this)">🗺 Mapa</button>
+    <button class="tab-btn" onclick="switchTab('market',this)">📈 Market Share</button>
+    <button class="tab-btn" onclick="switchTab('reports',this)">📊 Relatórios</button>
+    <button class="tab-btn" onclick="switchTab('segment',this)">🏷 Segmentos</button>
+  </div>
+
+  <div class="tab-content active" id="map-tab">
+    <div class="map-wrap">
+      <div class="map-container">
+        <div id="google-map"></div>
+        <div class="map-legend">
+          <div class="legend-item"><div class="legend-dot green"></div> Cliente</div>
+          <div class="legend-item"><div class="legend-dot blue"></div> Prospect/Contatado</div>
+          <div class="legend-item"><div class="legend-dot red"></div> Concorrente</div>
+        </div>
+      </div>
+      <div class="map-sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-title">🔍 Busca Inteligente</div>
+          <div class="sidebar-sub">Encontre empresas por local ou nome</div>
+        </div>
+        <div class="search-bar">
+          <div class="search-type">
+            <label><input type="radio" name="searchType" value="location" checked> 📍 Por Cidade/Bairro/Rua</label>
+            <label><input type="radio" name="searchType" value="company"> 🏢 Por Nome da Empresa</label>
+          </div>
+          <div class="search-row">
+            <input type="text" id="search-input" class="search-input" placeholder="Ex: São Paulo, Av. Paulista, 1000">
+            <button class="btn-search" onclick="searchBusinesses()">🔎 Buscar</button>
+          </div>
+          <div class="search-row">
+            <input type="text" id="company-name-input" class="search-input" placeholder="Ex: Google Brasil, Magazine Luiza..." style="display:none">
+          </div>
+        </div>
+        <div class="map-controls">
+          <button class="btn-sm active" onclick="filterByStatus('',this)">Todas</button>
+          <button class="btn-sm" onclick="filterByStatus('prospect',this)">Prospect</button>
+          <button class="btn-sm" onclick="filterByStatus('contacted',this)">Contatado</button>
+          <button class="btn-sm" onclick="filterByStatus('interested',this)">Interessado</button>
+          <button class="btn-sm" onclick="filterByStatus('customer',this)">Cliente</button>
+          <button class="btn-sm" onclick="filterByStatus('competitor',this)">Concorrente</button>
+        </div>
+        <div class="company-list" id="company-list">
+          <div style="padding:1rem;color:var(--text3);text-align:center;font-size:12px">
+            💡 Digite uma cidade ou empresa e clique em Buscar
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="market-tab">
+    <div style="padding:1.5rem;overflow-y:auto;height:100%">
+      <div class="sidebar-header" style="padding:0 0 1rem 0">
+        <div class="sidebar-title">📊 Market Share - Participação de Mercado</div>
+        <div class="sidebar-sub">Análise comparativa com concorrentes</div>
+      </div>
+      <div id="market-stats"></div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="reports-tab">
+    <div class="reports-container">
+      <div class="reports-filters">
+        <div class="filter-group">
+          <label>📍 Filtrar por Região</label>
+          <select id="filter-region" class="filter-select">
+            <option value="">Todas as regiões</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>🏙️ Filtrar por Estado</label>
+          <select id="filter-state" class="filter-select">
+            <option value="">Todos os estados</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>🏢 Filtrar por Cidade</label>
+          <select id="filter-city" class="filter-select">
+            <option value="">Todas as cidades</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>⚙️ Filtrar por Software</label>
+          <select id="filter-software" class="filter-select">
+            <option value="">Todos os softwares</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>👥 Filtrar por Contador</label>
+          <select id="filter-counter" class="filter-select">
+            <option value="">Todos os contadores</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>📊 Status</label>
+          <select id="filter-status-report" class="filter-select">
+            <option value="">Todos</option>
+            <option value="customer">✅ Clientes</option>
+            <option value="prospect">📌 Prospect</option>
+            <option value="competitor">⚠️ Concorrentes</option>
+          </select>
+        </div>
+        <button class="btn-filter" onclick="applyReportsFilter()">🔍 Aplicar Filtros</button>
+        <button class="btn-reset" onclick="resetReportsFilter()">⟳ Limpar</button>
+      </div>
+      <div class="reports-content" id="reports-content">
+        <!-- Relatórios serão gerados aqui -->
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="segment-tab">
+    <div style="padding:1.5rem;overflow-y:auto;height:100%">
+      <div class="sidebar-header" style="padding:0 0 1rem 0">
+        <div class="sidebar-title">🏷 Segmentação por Sistema</div>
+        <div class="sidebar-sub">Empresas agrupadas por software utilizado</div>
+      </div>
+      <div id="segment-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📌 Informações da Empresa</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-group">
+        <div class="field-label">🏢 Nome da Empresa</div>
+        <input type="text" id="modal-company-name" class="field-input" readonly>
+      </div>
+      <div class="field-group">
+        <div class="field-label">📍 Endereço</div>
+        <input type="text" id="modal-company-addr" class="field-input" readonly>
+      </div>
+      <div class="field-group">
+        <div class="field-label">⚙️ Sistema Utilizado *</div>
+        <input type="text" id="modal-system" class="field-input" placeholder="Ex: SAP, Omie, Nuvem Fiscal, ContaAzul...">
+      </div>
+      <div class="field-group">
+        <div class="field-label">👥 Contador Responsável *</div>
+        <input type="text" id="modal-counter" class="field-input" placeholder="Nome da contabilidade ou contador">
+      </div>
+      <div class="field-group">
+        <div class="field-label">📊 Classificação</div>
+        <select id="modal-status" class="field-input">
+          <option value="prospect">📌 Prospect (Potencial)</option>
+          <option value="contacted">📞 Contatado</option>
+          <option value="interested">⭐ Interessado</option>
+          <option value="customer">✅ Cliente (nosso)</option>
+          <option value="competitor">⚠️ Concorrente</option>
+        </select>
+      </div>
+      <div class="field-group" id="competitor-field" style="display:none">
+        <div class="field-label">🏆 Qual concorrente?</div>
+        <input type="text" id="modal-competitor" class="field-input" placeholder="Ex: Empresa XYZ Sistemas">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn-accent" onclick="saveCompany()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- NOTIFICATION -->
+<div class="notif" id="notif"></div>
+
+<script>
+let map, geocoder, currentMarkers = [];
+let currentPlace = null;
+let companies = [];
+let apiKey = '';
+let searchResults = [];
+let currentFilter = '';
+let placesService = null;
+let currentReportsFilter = { region: '', state: '', city: '', software: '', counter: '', status: '' };
+
+// Load saved data
+function loadData() {
+  const saved = localStorage.getItem('mm_companies');
+  if (saved) {
+    companies = JSON.parse(saved);
+    console.log('Empresas carregadas:', companies.length);
+  }
+}
+
+// Save companies
+function saveCompanies() {
+  localStorage.setItem('mm_companies', JSON.stringify(companies));
+  updateMarketShare();
+  updateSegments();
+  updateReportsFilters();
+  applyReportsFilter();
+}
+
+// Extrair cidade e estado do endereço
+function extractLocation(address) {
+  if (!address) return { city: '', state: '', region: '' };
+  const parts = address.split(',');
+  let city = '', state = '';
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const part = parts[i].trim();
+    if (part.length === 2 && part.match(/[A-Z]{2}/)) {
+      state = part;
+      if (i > 0) city = parts[i-1].trim();
+      break;
+    }
+  }
+  const regions = {
+    'SP': 'Sudeste', 'RJ': 'Sudeste', 'MG': 'Sudeste', 'ES': 'Sudeste',
+    'RS': 'Sul', 'SC': 'Sul', 'PR': 'Sul',
+    'BA': 'Nordeste', 'PE': 'Nordeste', 'CE': 'Nordeste', 'MA': 'Nordeste', 'PB': 'Nordeste', 'PI': 'Nordeste', 'RN': 'Nordeste', 'SE': 'Nordeste', 'AL': 'Nordeste',
+    'AM': 'Norte', 'PA': 'Norte', 'AC': 'Norte', 'RO': 'Norte', 'RR': 'Norte', 'AP': 'Norte', 'TO': 'Norte',
+    'GO': 'Centro-Oeste', 'MT': 'Centro-Oeste', 'MS': 'Centro-Oeste', 'DF': 'Centro-Oeste'
+  };
+  const region = regions[state] || 'Outros';
+  return { city, state, region };
+}
+
+// Update reports filters dropdowns
+function updateReportsFilters() {
+  const cities = new Set();
+  const states = new Set();
+  const regions = new Set();
+  const softwares = new Set();
+  const counters = new Set();
+  
+  companies.forEach(comp => {
+    const { city, state, region } = extractLocation(comp.address);
+    if (city) cities.add(city);
+    if (state) states.add(state);
+    if (region) regions.add(region);
+    if (comp.system) softwares.add(comp.system);
+    if (comp.counter) counters.add(comp.counter);
+  });
+  
+  const regionSelect = document.getElementById('filter-region');
+  regionSelect.innerHTML = '<option value="">Todas as regiões</option>' + 
+    Array.from(regions).sort().map(r => `<option value="${r}">${r}</option>`).join('');
+  
+  const stateSelect = document.getElementById('filter-state');
+  stateSelect.innerHTML = '<option value="">Todos os estados</option>' + 
+    Array.from(states).sort().map(s => `<option value="${s}">${s}</option>`).join('');
+  
+  const citySelect = document.getElementById('filter-city');
+  citySelect.innerHTML = '<option value="">Todas as cidades</option>' + 
+    Array.from(cities).sort().map(c => `<option value="${c}">${c}</option>`).join('');
+  
+  const softwareSelect = document.getElementById('filter-software');
+  softwareSelect.innerHTML = '<option value="">Todos os softwares</option>' + 
+    Array.from(softwares).sort().map(s => `<option value="${s}">${s}</option>`).join('');
+  
+  const counterSelect = document.getElementById('filter-counter');
+  counterSelect.innerHTML = '<option value="">Todos os contadores</option>' + 
+    Array.from(counters).sort().map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+// Apply reports filter
+function applyReportsFilter() {
+  currentReportsFilter = {
+    region: document.getElementById('filter-region').value,
+    state: document.getElementById('filter-state').value,
+    city: document.getElementById('filter-city').value,
+    software: document.getElementById('filter-software').value,
+    counter: document.getElementById('filter-counter').value,
+    status: document.getElementById('filter-status-report').value
+  };
+  generateReports();
+}
+
+function resetReportsFilter() {
+  document.getElementById('filter-region').value = '';
+  document.getElementById('filter-state').value = '';
+  document.getElementById('filter-city').value = '';
+  document.getElementById('filter-software').value = '';
+  document.getElementById('filter-counter').value = '';
+  document.getElementById('filter-status-report').value = '';
+  applyReportsFilter();
+}
+
+// Generate reports
+function generateReports() {
+  const container = document.getElementById('reports-content');
+  if (!container) return;
+  
+  let filteredCompanies = [...companies];
+  
+  filteredCompanies = filteredCompanies.filter(comp => {
+    const { city, state, region } = extractLocation(comp.address);
+    if (currentReportsFilter.region && region !== currentReportsFilter.region) return false;
+    if (currentReportsFilter.state && state !== currentReportsFilter.state) return false;
+    if (currentReportsFilter.city && city !== currentReportsFilter.city) return false;
+    if (currentReportsFilter.software && comp.system !== currentReportsFilter.software) return false;
+    if (currentReportsFilter.counter && comp.counter !== currentReportsFilter.counter) return false;
+    if (currentReportsFilter.status && comp.status !== currentReportsFilter.status) return false;
+    return true;
+  });
+  
+  if (filteredCompanies.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text3)">Nenhuma empresa encontrada com os filtros selecionados.</div>';
+    return;
+  }
+  
+  // Estatísticas por software
+  const softwareStats = {};
+  filteredCompanies.forEach(comp => {
+    if (comp.system) {
+      softwareStats[comp.system] = (softwareStats[comp.system] || 0) + 1;
+    }
+  });
+  
+  // Estatísticas por contador
+  const counterStats = {};
+  filteredCompanies.forEach(comp => {
+    if (comp.counter) {
+      counterStats[comp.counter] = (counterStats[comp.counter] || 0) + 1;
+    }
+  });
+  
+  // Clientes vs Concorrentes
+  const clients = filteredCompanies.filter(c => c.status === 'customer').length;
+  const prospects = filteredCompanies.filter(c => ['prospect', 'contacted', 'interested'].includes(c.status)).length;
+  const competitors = filteredCompanies.filter(c => c.status === 'competitor').length;
+  const total = filteredCompanies.length;
+  
+  // Market share por região
+  const regionStats = {};
+  filteredCompanies.forEach(comp => {
+    const { region } = extractLocation(comp.address);
+    if (region && comp.status === 'customer') {
+      regionStats[region] = (regionStats[region] || 0) + 1;
+    }
+  });
+  
+  const regionTotal = {};
+  filteredCompanies.forEach(comp => {
+    const { region } = extractLocation(comp.address);
+    if (region) {
+      regionTotal[region] = (regionTotal[region] || 0) + 1;
+    }
+  });
+  
+  // Market share por estado
+  const stateStats = {};
+  filteredCompanies.forEach(comp => {
+    const { state } = extractLocation(comp.address);
+    if (state && comp.status === 'customer') {
+      stateStats[state] = (stateStats[state] || 0) + 1;
+    }
+  });
+  
+  const stateTotal = {};
+  filteredCompanies.forEach(comp => {
+    const { state } = extractLocation(comp.address);
+    if (state) {
+      stateTotal[state] = (stateTotal[state] || 0) + 1;
+    }
+  });
+  
+  let html = `
+    <!-- Resumo Geral -->
+    <div class="report-card">
+      <div class="report-header">📊 Resumo Geral (${filteredCompanies.length} empresas)</div>
+      <div class="report-body">
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-value">${clients}</div>
+            <div class="stat-label-sm">✅ Clientes</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">${prospects}</div>
+            <div class="stat-label-sm">📌 Potenciais</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">${competitors}</div>
+            <div class="stat-label-sm">⚠️ Concorrentes</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">${total > 0 ? ((clients/total)*100).toFixed(1) : 0}%</div>
+            <div class="stat-label-sm">Market Share</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Softwares Utilizados -->
+    <div class="report-card">
+      <div class="report-header">⚙️ Softwares Utilizados pelas Empresas</div>
+      <div class="report-body">
+        ${Object.entries(softwareStats).sort((a,b) => b[1] - a[1]).map(([sw, count]) => `
+          <div style="margin-bottom:8px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+              <span>${sw}</span>
+              <span>${count} empresa(s) (${((count/total)*100).toFixed(1)}%)</span>
+            </div>
+            <div class="chart-bar"><div class="chart-fill" style="width:${(count/total)*100}%">${count}</div></div>
+          </div>
+        `).join('') || '<div style="color:var(--text3)">Nenhum software registrado</div>'}
+      </div>
+    </div>
+    
+    <!-- Contabilidades Parceiras -->
+    <div class="report-card">
+      <div class="report-header">👥 Contabilidades e Contadores</div>
+      <div class="report-body">
+        ${Object.entries(counterStats).sort((a,b) => b[1] - a[1]).slice(0,10).map(([counter, count]) => `
+          <div style="margin-bottom:8px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+              <span>${counter}</span>
+              <span>${count} empresa(s)</span>
+            </div>
+            <div class="chart-bar"><div class="chart-fill" style="width:${(count/total)*100}%;background:var(--purple)">${count}</div></div>
+          </div>
+        `).join('') || '<div style="color:var(--text3)">Nenhum contador registrado</div>'}
+      </div>
+    </div>
+    
+    <!-- Market Share por Região -->
+    <div class="report-card">
+      <div class="report-header">📍 Market Share por Região</div>
+      <div class="report-body">
+        <div class="stats-grid">
+          ${Object.keys(regionStats).map(region => {
+            const clientsCount = regionStats[region] || 0;
+            const totalCount = regionTotal[region] || 0;
+            const share = totalCount > 0 ? ((clientsCount/totalCount)*100).toFixed(1) : 0;
+            return `
+              <div class="stat-item">
+                <div class="stat-value">${share}%</div>
+                <div class="stat-label-sm">${region}</div>
+                <div style="font-size:10px;color:var(--text3)">${clientsCount}/${totalCount} clientes</div>
+              </div>
+            `;
+          }).join('') || '<div style="color:var(--text3)">Nenhum dado por região</div>'}
+        </div>
+      </div>
+    </div>
+    
+    <!-- Market Share por Estado -->
+    <div class="report-card">
+      <div class="report-header">🗺️ Market Share por Estado</div>
+      <div class="report-body">
+        <div class="stats-grid">
+          ${Object.entries(stateStats).sort((a,b) => b[1] - a[1]).slice(0,8).map(([state, clientsCount]) => {
+            const totalCount = stateTotal[state] || 0;
+            const share = totalCount > 0 ? ((clientsCount/totalCount)*100).toFixed(1) : 0;
+            return `
+              <div class="stat-item">
+                <div class="stat-value">${share}%</div>
+                <div class="stat-label-sm">${state}</div>
+                <div style="font-size:10px;color:var(--text3)">${clientsCount}/${totalCount}</div>
+              </div>
+            `;
+          }).join('') || '<div style="color:var(--text3)">Nenhum dado por estado</div>'}
+        </div>
+      </div>
+    </div>
+    
+    <!-- Lista de Empresas Filtradas -->
+    <div class="report-card">
+      <div class="report-header">🏢 Empresas Filtradas</div>
+      <div class="report-body">
+        <div class="company-list-report">
+          ${filteredCompanies.map(comp => {
+            const statusIcon = comp.status === 'customer' ? '✅' : (comp.status === 'competitor' ? '⚠️' : '📌');
+            return `
+              <div class="company-item">
+                <div style="display:flex;align-items:center">
+                  <span style="margin-right:8px">${statusIcon}</span>
+                  <div>
+                    <div style="font-weight:500">${comp.name}</div>
+                    <div style="font-size:10px;color:var(--text3)">${comp.system || 'Sem sistema'} • ${comp.counter || 'Sem contador'}</div>
+                  </div>
+                </div>
+                <div style="font-size:10px;color:var(--text3)">${comp.address?.substring(0, 40) || ''}...</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+  
+  container.innerHTML = html;
+}
+
+// Update Market Share dashboard
+function updateMarketShare() {
+  const marketDiv = document.getElementById('market-stats');
+  if (!marketDiv) return;
+  
+  const total = companies.length;
+  const clients = companies.filter(c => c.status === 'customer').length;
+  const prospects = companies.filter(c => ['prospect', 'contacted', 'interested'].includes(c.status)).length;
+  const competitors = companies.filter(c => c.status === 'competitor').length;
+  
+  const marketShare = total > 0 ? ((clients / total) * 100).toFixed(1) : 0;
+  const winRate = (clients + prospects) > 0 ? ((clients / (clients + prospects)) * 100).toFixed(1) : 0;
+  
+  const competitorMap = {};
+  companies.filter(c => c.status === 'competitor' && c.competitorName).forEach(c => {
+    const name = c.competitorName;
+    competitorMap[name] = (competitorMap[name] || 0) + 1;
+  });
+  
+  let html = `
+    <div class="market-stats">
+      <div class="stat-label">📊 Participação de Mercado</div>
+      <div class="stat-number">${marketShare}%</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${marketShare}%"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:10px">
+        <div><div class="stat-number" style="font-size:18px">${clients}</div><div class="stat-label">Clientes</div></div>
+        <div><div class="stat-number" style="font-size:18px">${prospects}</div><div class="stat-label">Potenciais</div></div>
+        <div><div class="stat-number" style="font-size:18px">${competitors}</div><div class="stat-label">Concorrentes</div></div>
+      </div>
+    </div>
+    
+    <div class="market-stats">
+      <div class="stat-label">🎯 Taxa de Conversão</div>
+      <div class="stat-number">${winRate}%</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${winRate}%;background:var(--accent)"></div></div>
+    </div>
+  `;
+  
+  if (Object.keys(competitorMap).length > 0) {
+    html += `<div class="market-stats">
+      <div class="stat-label">⚠️ Principais Concorrentes</div>`;
+    for (const [name, count] of Object.entries(competitorMap).sort((a,b) => b[1] - a[1])) {
+      html += `<div style="display:flex;justify-content:space-between;margin-top:8px">
+        <span style="font-size:12px">${name}</span>
+        <span style="font-size:12px;color:var(--red)">${count} clientes deles</span>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+  
+  marketDiv.innerHTML = html;
+}
+
+function updateSegments() {
+  const segmentList = document.getElementById('segment-list');
+  if (!segmentList) return;
+  
+  if (companies.length === 0) {
+    segmentList.innerHTML = '<p style="color:var(--text3)">Nenhuma empresa mapeada ainda.</p>';
+    return;
+  }
+  
+  const bySystem = {};
+  const byCounter = {};
+  
+  companies.forEach(comp => {
+    if (comp.system) {
+      if (!bySystem[comp.system]) bySystem[comp.system] = [];
+      bySystem[comp.system].push(comp);
+    }
+    if (comp.counter) {
+      if (!byCounter[comp.counter]) byCounter[comp.counter] = [];
+      byCounter[comp.counter].push(comp);
+    }
+  });
+  
+  let html = '';
+  
+  html += '<div class="market-stats"><div class="stat-label">⚙️ Por Sistema Utilizado</div>';
+  for (const [system, comps] of Object.entries(bySystem).sort((a,b) => b[1].length - a[1].length)) {
+    const clients = comps.filter(c => c.status === 'customer').length;
+    html += `<div style="margin-top:10px;padding:8px;background:var(--bg2);border-radius:6px">
+      <div style="font-weight:600;font-size:13px">${system}</div>
+      <div style="font-size:11px;color:var(--text2)">Total: ${comps.length} | Clientes: ${clients}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px">${comps.slice(0,3).map(c => c.name).join(', ')}${comps.length > 3 ? '...' : ''}</div>
+    </div>`;
+  }
+  html += '</div>';
+  
+  html += '<div class="market-stats" style="margin-top:1rem"><div class="stat-label">👥 Por Contador</div>';
+  for (const [counter, comps] of Object.entries(byCounter).sort((a,b) => b[1].length - a[1].length)) {
+    html += `<div style="margin-top:10px;padding:8px;background:var(--bg2);border-radius:6px">
+      <div style="font-weight:600;font-size:13px">${counter}</div>
+      <div style="font-size:11px;color:var(--text2)">${comps.length} empresa(s)</div>
+    </div>`;
+  }
+  html += '</div>';
+  
+  segmentList.innerHTML = html;
+}
+
+function setupEventListeners() {
+  const statusSelect = document.getElementById('modal-status');
+  if (statusSelect) {
+    statusSelect.addEventListener('change', function() {
+      const competitorField = document.getElementById('competitor-field');
+      if (this.value === 'competitor') {
+        competitorField.style.display = 'block';
+      } else {
+        competitorField.style.display = 'none';
+      }
+    });
+  }
+  
+  const radioLocation = document.querySelector('input[value="location"]');
+  const radioCompany = document.querySelector('input[value="company"]');
+  const searchInput = document.getElementById('search-input');
+  const companyInput = document.getElementById('company-name-input');
+  
+  if (radioLocation && radioCompany) {
+    radioLocation.addEventListener('change', () => {
+      searchInput.style.display = 'block';
+      companyInput.style.display = 'none';
+    });
+    radioCompany.addEventListener('change', () => {
+      searchInput.style.display = 'none';
+      companyInput.style.display = 'block';
+    });
+  }
+  
+  document.getElementById('search-input').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') searchBusinesses();
+  });
+  document.getElementById('company-name-input').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') searchBusinesses();
+  });
+}
+
+function doLogin() {
+  const apikey = document.getElementById('login-apikey').value.trim();
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value.trim();
+  const keepLogged = document.getElementById('keep-logged').checked;
+  const loginBtn = document.getElementById('login-btn');
+  
+  const errDiv = document.getElementById('login-err');
+  errDiv.style.display = 'none';
+  errDiv.innerHTML = '';
+  
+  if (!apikey || !email || !pass) {
+    errDiv.innerHTML = '❌ Preencha todos os campos';
+    errDiv.style.display = 'block';
+    return;
+  }
+  
+  if (!apikey.startsWith('AIza')) {
+    errDiv.innerHTML = '❌ Chave inválida. Deve começar com "AIza"';
+    errDiv.style.display = 'block';
+    return;
+  }
+  
+  loginBtn.innerHTML = 'Entrando <span class="loading-spinner"></span>';
+  loginBtn.disabled = true;
+  
+  localStorage.setItem('mm_gkey', apikey);
+  localStorage.setItem('mm_user', email);
+  if (keepLogged) localStorage.setItem('mm_logged', 'true');
+  
+  apiKey = apikey;
+  
+  const oldScript = document.querySelector('script[src*="maps.googleapis.com"]');
+  if (oldScript) oldScript.remove();
+  
+  const script = document.createElement('script');
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&callback=window.initGoogleMap`;
+  script.async = true;
+  script.defer = true;
+  script.onerror = () => {
+    loginBtn.innerHTML = 'Entrar';
+    loginBtn.disabled = false;
+    errDiv.innerHTML = '❌ Erro ao carregar Google Maps. Verifique sua chave.';
+    errDiv.style.display = 'block';
+  };
+  document.head.appendChild(script);
+}
+
+window.initGoogleMap = function() {
+  const loginBtn = document.getElementById('login-btn');
+  
+  if (!window.google) {
+    loginBtn.innerHTML = 'Entrar';
+    loginBtn.disabled = false;
+    document.getElementById('login-err').innerHTML = '❌ Google Maps não carregou. Verifique sua chave API.';
+    document.getElementById('login-err').style.display = 'block';
+    return;
+  }
+  
+  document.getElementById('screen-login').classList.remove('active');
+  document.getElementById('screen-app').classList.add('active');
+  document.getElementById('topbar-user').textContent = localStorage.getItem('mm_user') || 'Usuário';
+  
+  const defaultLocation = { lat: -23.5505, lng: -46.6333 };
+  
+  map = new google.maps.Map(document.getElementById('google-map'), {
+    zoom: 12,
+    center: defaultLocation,
+    mapTypeControl: true,
+    fullscreenControl: true,
+    streetViewControl: false,
+    styles: getDarkMapStyle()
+  });
+  
+  placesService = new google.maps.places.PlacesService(map);
+  geocoder = new google.maps.Geocoder();
+  
+  loadCompaniesOnMap();
+  updateMarketShare();
+  updateSegments();
+  updateReportsFilters();
+  generateReports();
+  setupEventListeners();
+  
+  showNotif('✅ Login realizado! Faça uma busca para começar.', 'success');
+};
+
+function searchBusinesses() {
+  const searchType = document.querySelector('input[name="searchType"]:checked').value;
+  let query = '';
+  
+  if (searchType === 'location') {
+    query = document.getElementById('search-input').value.trim();
+  } else {
+    query = document.getElementById('company-name-input').value.trim();
+  }
+  
+  if (!query) {
+    showNotif('Digite o que deseja buscar', 'error');
+    return;
+  }
+  
+  clearMarkers();
+  showNotif('Buscando...', 'info');
+  
+  if (searchType === 'company') {
+    const request = {
+      query: query,
+      fields: ['name', 'formatted_address', 'geometry', 'place_id', 'vicinity'],
+      language: 'pt-BR'
+    };
+    
+    placesService.textSearch(request, (results, status) => {
+      if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
+        searchResults = results;
+        displayBusinesses(results);
+        if (results[0].geometry && results[0].geometry.location) {
+          map.setCenter(results[0].geometry.location);
+          map.setZoom(16);
+        }
+        showNotif(`✅ Encontrada(s) ${results.length} empresa(s)`, 'success');
+      } else {
+        showNotif(`❌ Nenhuma empresa encontrada com o nome "${query}"`, 'error');
+        document.getElementById('company-list').innerHTML = `<div style="padding:1rem;color:var(--text3);text-align:center;font-size:12px">
+          ❌ Nenhuma empresa encontrada<br>💡 Tente buscar por cidade primeiro</div>`;
+      }
+    });
+  } else {
+    geocoder.geocode({ address: query + ', Brasil' }, (results, status) => {
+      if (status === 'OK' && results[0]) {
+        const location = results[0].geometry.location;
+        map.setCenter(location);
+        map.setZoom(15);
+        
+        const request = {
+          location: location,
+          radius: 2000,
+          type: 'establishment',
+          language: 'pt-BR'
+        };
+        
+        placesService.nearbySearch(request, (results, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK && results.length > 0) {
+            searchResults = results;
+            displayBusinesses(results);
+            showNotif(`✅ Encontradas ${results.length} empresas na região`, 'success');
+          } else {
+            showNotif(`❌ Nenhuma empresa encontrada em "${query}"`, 'error');
+          }
+        });
+      } else {
+        showNotif(`❌ Local "${query}" não encontrado`, 'error');
+      }
+    });
+  }
+}
+
+function displayBusinesses(results) {
+  const list = document.getElementById('company-list');
+  list.innerHTML = '';
+  
+  if (!results || results.length === 0) {
+    list.innerHTML = '<div style="padding:1rem;color:var(--text3);text-align:center;font-size:12px">Nenhuma empresa encontrada</div>';
+    return;
+  }
+  
+  results.forEach(place => {
+    if (!place.place_id) return;
+    
+    const card = document.createElement('div');
+    card.className = 'company-card';
+    card.setAttribute('data-place-id', place.place_id);
+    
+    const existing = companies.find(c => c.placeId === place.place_id);
+    if (existing) card.classList.add('mapped');
+    
+    let statusTag = '';
+    if (existing) {
+      const statusLabels = {
+        'prospect': '📌 Prospect',
+        'contacted': '📞 Contatado',
+        'interested': '⭐ Interessado',
+        'customer': '✅ Cliente',
+        'competitor': '⚠️ Concorrente'
+      };
+      statusTag = `<span class="tag tag-status">${statusLabels[existing.status] || existing.status}</span>`;
+      if (existing.system) statusTag += `<span class="tag tag-system">⚙️ ${existing.system}</span>`;
+      if (existing.counter) statusTag += `<span class="tag tag-counter">📋 ${existing.counter}</span>`;
+    } else {
+      statusTag = '<span class="tag tag-none">➕ Clique para adicionar</span>';
+    }
+    
+    const address = place.formatted_address || place.vicinity || 'Endereço não disponível';
+    
+    card.innerHTML = `
+      <div class="company-name">${place.name || 'Sem nome'}</div>
+      <div class="company-addr">${address}</div>
+      <div class="company-tags">${statusTag}</div>
+    `;
+    
+    card.onclick = () => openCompanyModal(place);
+    list.appendChild(card);
+    
+    if (place.geometry && place.geometry.location) {
+      let markerColor = '#ef4444';
+      if (existing) {
+        if (existing.status === 'customer') markerColor = '#22c55e';
+        else if (existing.status === 'competitor') markerColor = '#ef4444';
+        else markerColor = '#3b82f6';
+      }
+      
+      const marker = new google.maps.Marker({
+        position: place.geometry.location,
+        map: map,
+        title: place.name,
+        icon: { path: google.maps.SymbolPath.CIRCLE, fillColor: markerColor, fillOpacity: 1, strokeWeight: 0, scale: 8 }
+      });
+      
+      marker.addListener('click', () => openCompanyModal(place));
+      currentMarkers.push(marker);
+    }
+  });
+}
+
+function openCompanyModal(place) {
+  currentPlace = place;
+  const existing = companies.find(c => c.placeId === place.place_id);
+  
+  document.getElementById('modal-company-name').value = place.name || '';
+  document.getElementById('modal-company-addr').value = place.formatted_address || place.vicinity || 'Endereço não disponível';
+  document.getElementById('modal-system').value = existing ? (existing.system || '') : '';
+  document.getElementById('modal-counter').value = existing ? (existing.counter || '') : '';
+  document.getElementById('modal-status').value = existing ? (existing.status || 'prospect') : 'prospect';
+  document.getElementById('modal-competitor').value = existing ? (existing.competitorName || '') : '';
+  
+  const competitorField = document.getElementById('competitor-field');
+  competitorField.style.display = (document.getElementById('modal-status').value === 'competitor') ? 'block' : 'none';
+  
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  currentPlace = null;
+}
+
+function saveCompany() {
+  if (!currentPlace) return;
+  
+  const system = document.getElementById('modal-system').value.trim();
+  const counter = document.getElementById('modal-counter').value.trim();
+  const status = document.getElementById('modal-status').value;
+  const competitorName = document.getElementById('modal-competitor').value.trim();
+  
+  if (!system || !counter) {
+    showNotif('⚠️ Preencha o sistema utilizado e o contador responsável', 'error');
+    return;
+  }
+  
+  if (status === 'competitor' && !competitorName) {
+    showNotif('⚠️ Informe qual é o concorrente', 'error');
+    return;
+  }
+  
+  const company = {
+    placeId: currentPlace.place_id,
+    name: currentPlace.name || 'Sem nome',
+    address: currentPlace.formatted_address || currentPlace.vicinity || 'Endereço não disponível',
+    lat: currentPlace.geometry ? currentPlace.geometry.location.lat() : 0,
+    lng: currentPlace.geometry ? currentPlace.geometry.location.lng() : 0,
+    system: system,
+    counter: counter,
+    status: status,
+    competitorName: status === 'competitor' ? competitorName : null,
+    timestamp: new Date().toISOString()
+  };
+  
+  const existingIndex = companies.findIndex(c => c.placeId === company.placeId);
+  if (existingIndex >= 0) {
+    companies[existingIndex] = company;
+    showNotif('✅ Empresa atualizada!', 'success');
+  } else {
+    companies.push(company);
+    showNotif('✅ Nova empresa adicionada!', 'success');
+  }
+  
+  saveCompanies();
+  closeModal();
+  
+  if (searchResults.length > 0) displayBusinesses(searchResults);
+  loadCompaniesOnMap();
+}
+
+function loadCompaniesOnMap() {
+  clearMarkers();
+  
+  companies.forEach(company => {
+    if (company.lat && company.lng) {
+      let markerColor = '#ef4444';
+      if (company.status === 'customer') markerColor = '#22c55e';
+      else if (company.status === 'competitor') markerColor = '#ef4444';
+      else markerColor = '#3b82f6';
+      
+      const marker = new google.maps.Marker({
+        position: { lat: company.lat, lng: company.lng },
+        map: map,
+        title: company.name,
+        icon: { path: google.maps.SymbolPath.CIRCLE, fillColor: markerColor, fillOpacity: 1, strokeWeight: 0, scale: 8 }
+      });
+      
+      marker.addListener('click', () => {
+        const placeData = {
+          place_id: company.placeId,
+          name: company.name,
+          formatted_address: company.address,
+          vicinity: company.address,
+          geometry: { location: { lat: () => company.lat, lng: () => company.lng } }
+        };
+        openCompanyModal(placeData);
+      });
+      
+      currentMarkers.push(marker);
+    }
+  });
+}
+
+function clearMarkers() {
+  currentMarkers.forEach(marker => { if (marker && marker.setMap) marker.setMap(null); });
+  currentMarkers = [];
+}
+
+function filterByStatus(status, btn) {
+  currentFilter = status;
+  document.querySelectorAll('.map-controls .btn-sm').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  
+  const list = document.getElementById('company-list');
+  const cards = list.querySelectorAll('.company-card');
+  
+  cards.forEach(card => {
+    if (!status) {
+      card.style.display = 'block';
+    } else {
+      const placeId = card.getAttribute('data-place-id');
+      const comp = companies.find(c => c.placeId === placeId);
+      card.style.display = (comp && comp.status === status) ? 'block' : 'none';
+    }
+  });
+}
+
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(tab + '-tab').classList.add('active');
+  
+  if (tab === 'market') updateMarketShare();
+  else if (tab === 'segment') updateSegments();
+  else if (tab === 'reports') {
+    updateReportsFilters();
+    generateReports();
+  }
+}
+
+function doLogout() {
+  localStorage.removeItem('mm_logged');
+  localStorage.removeItem('mm_user');
+  companies = [];
+  searchResults = [];
+  currentMarkers = [];
+  if (map) clearMarkers();
+  
+  document.getElementById('screen-app').classList.remove('active');
+  document.getElementById('screen-login').classList.add('active');
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-apikey').value = '';
+  
+  const loginBtn = document.getElementById('login-btn');
+  loginBtn.innerHTML = 'Entrar';
+  loginBtn.disabled = false;
+  
+  showNotif('Logout realizado', 'info');
+}
+
+function showNotif(msg, type = 'info') {
+  const notif = document.getElementById('notif');
+  notif.textContent = msg;
+  notif.className = `notif show ${type}`;
+  setTimeout(() => notif.classList.remove('show'), 3000);
+}
+
+function getDarkMapStyle() {
+  return [
+    { elementType: 'geometry', stylers: [{ color: '#242f3e' }] },
+    { elementType: 'labels.text.stroke', stylers: [{ color: '#242f3e' }] },
+    { elementType: 'labels.text.fill', stylers: [{ color: '#746855' }] },
+    { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
+    { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
+    { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#263c3f' }] },
+    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#38414e' }] },
+    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#212a37' }] },
+    { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#9ca5b3' }] },
+    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#746855' }] },
+    { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#1f2835' }] },
+    { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#2f3948' }] },
+    { featureType: 'transit.station', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
+    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#17263c' }] },
+    { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#515c6d' }] }
+  ];
+}
+
+// Initialize
+loadData();
+setupEventListeners();
+
+if (localStorage.getItem('mm_logged') === 'true') {
+  const savedKey = localStorage.getItem('mm_gkey');
+  const savedUser = localStorage.getItem('mm_user');
+  if (savedKey && savedUser) {
+    document.getElementById('login-apikey').value = savedKey;
+    document.getElementById('login-email').value = savedUser;
+    doLogin();
+  }
+}
+</script>
+</body>
+</html>
