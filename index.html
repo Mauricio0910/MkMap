@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>MarketMap — Market Share Competitivo</title>
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0b0d13; color: #f1f5f9; height: 100vh; overflow: hidden; }
+  .screen { display: none; width: 100%; height: 100vh; }
+  .screen.active { display: flex; }
+  #screen-login { align-items: center; justify-content: center; background: #0b0d13; }
+  .login-box { width: 100%; max-width: 400px; padding: 2rem; background: #1a2035; border-radius: 16px; }
+  .logo { text-align: center; margin-bottom: 2rem; font-size: 28px; font-weight: bold; }
+  .logo span { color: #3b82f6; }
+  .field-group { margin-bottom: 1rem; }
+  .field-label { font-size: 12px; color: #94a3b8; margin-bottom: 6px; }
+  .field-input { width: 100%; background: #111520; border: 1px solid #2d3a5e; border-radius: 10px; padding: 12px; color: #fff; font-size: 14px; }
+  .btn-primary { width: 100%; padding: 12px; background: #3b82f6; border: none; border-radius: 10px; color: #fff; font-weight: bold; cursor: pointer; }
+  .btn-primary:hover { opacity: 0.9; }
+  .login-err { color: #ef4444; font-size: 13px; margin-top: 10px; display: none; }
+  #screen-app { flex-direction: column; }
+  .topbar { height: 56px; background: #111520; border-bottom: 1px solid #2d3a5e; display: flex; align-items: center; padding: 0 1rem; gap: 1rem; flex-shrink: 0; }
+  .topbar-logo { font-weight: bold; font-size: 18px; margin-right: auto; }
+  .topbar-logo span { color: #3b82f6; }
+  .role-badge { background: #3b82f6; padding: 4px 12px; border-radius: 20px; font-size: 12px; }
+  .btn-icon { background: none; border: 1px solid #2d3a5e; border-radius: 8px; color: #94a3b8; padding: 6px 12px; cursor: pointer; }
+  .tabs-row { display: flex; background: #111520; border-bottom: 1px solid #2d3a5e; padding: 0 1rem; gap: 0; overflow-x: auto; flex-shrink: 0; }
+  .tab-btn { padding: 12px 20px; background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 14px; border-bottom: 2px solid transparent; white-space: nowrap; }
+  .tab-btn.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+  .tab-content { display: none; flex: 1; overflow: hidden; }
+  .tab-content.active { display: flex; flex-direction: column; }
+  .map-wrap { display: flex; flex: 1; min-height: 0; }
+  .map-container { flex: 1; position: relative; }
+  #google-map { width: 100%; height: 100%; }
+  .map-sidebar { width: 420px; background: #111520; border-left: 1px solid #2d3a5e; display: flex; flex-direction: column; overflow: hidden; }
+  .search-bar { padding: 1rem; border-bottom: 1px solid #2d3a5e; }
+  .search-row { display: flex; gap: 8px; margin-top: 8px; }
+  .search-input { flex: 1; background: #0b0d13; border: 1px solid #2d3a5e; border-radius: 8px; padding: 8px 12px; color: #fff; }
+  .btn-search { background: #3b82f6; border: none; border-radius: 8px; padding: 8px 16px; color: #fff; cursor: pointer; }
+  .map-controls { padding: 0.75rem; border-bottom: 1px solid #2d3a5e; display: flex; flex-wrap: wrap; gap: 8px; }
+  .btn-sm { padding: 4px 12px; background: #1a2035; border: 1px solid #2d3a5e; border-radius: 20px; color: #94a3b8; cursor: pointer; font-size: 12px; }
+  .btn-sm.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+  .company-list { flex: 1; overflow-y: auto; padding: 0.5rem; }
+  .company-card { background: #1a2035; border-radius: 10px; padding: 12px; margin-bottom: 8px; cursor: pointer; border-left: 3px solid #6b7280; }
+  .company-card.client { border-left-color: #22c55e; }
+  .company-card.exclient { border-left-color: #f59e0b; }
+  .company-card.competitor { border-left-color: #ef4444; }
+  .company-card.visited { border-left-color: #a855f7; }
+  .company-name { font-weight: 600; font-size: 14px; }
+  .company-addr { font-size: 11px; color: #64748b; margin-top: 4px; }
+  .company-tags { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .tag { font-size: 10px; padding: 2px 8px; border-radius: 20px; }
+  .tag-client { background: rgba(34,197,94,0.2); color: #22c55e; }
+  .tag-exclient { background: rgba(245,158,11,0.2); color: #f59e0b; }
+  .tag-competitor { background: rgba(239,68,68,0.2); color: #ef4444; }
+  .tag-visited { background: rgba(168,85,247,0.2); color: #a855f7; }
+  .tag-system { background: rgba(59,130,246,0.2); color: #60a5fa; }
+  .tag-counter { background: rgba(168,85,247,0.2); color: #a855f7; }
+  .map-legend { position: absolute; bottom: 20px; left: 20px; background: #1a2035; border-radius: 10px; padding: 8px 12px; z-index: 10; font-size: 11px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 1000; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #1a2035; border-radius: 16px; width: 90%; max-width: 550px; max-height: 85vh; overflow-y: auto; }
+  .modal-header { padding: 1.5rem; border-bottom: 1px solid #2d3a5e; display: flex; justify-content: space-between; align-items: center; }
+  .modal-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+  .modal-footer { padding: 1.5rem; border-top: 1px solid #2d3a5e; display: flex; gap: 1rem; justify-content: flex-end; }
+  .checkbox-group { display: flex; gap: 1.5rem; flex-wrap: wrap; margin: 8px 0; }
+  .checkbox-group label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; }
+  .section-title { font-size: 13px; font-weight: 600; color: #60a5fa; margin-bottom: 8px; border-bottom: 1px solid #2d3a5e; padding-bottom: 4px; }
+  .notif { position: fixed; bottom: 20px; right: 20px; background: #1a2035; border-radius: 10px; padding: 12px 20px; display: none; z-index: 2000; }
+  .notif.show { display: block; }
+  .notif.success { border-left: 3px solid #22c55e; }
+  .notif.error { border-left: 3px solid #ef4444; }
+  .reports-container { padding: 1rem; overflow-y: auto; height: 100%; }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+  .stat-card { background: #1a2035; border-radius: 12px; padding: 1rem; text-align: center; }
+  .stat-number { font-size: 32px; font-weight: bold; color: #3b82f6; }
+  .progress-bar { height: 8px; background: #2d3a5e; border-radius: 4px; margin-top: 8px; overflow: hidden; }
+  .progress-fill { height: 100%; background: #22c55e; width: 0%; }
+  .competition-card { background: #1a2035; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; }
+  .double-bar { display: flex; height: 30px; border-radius: 8px; overflow: hidden; margin-top: 8px; }
+  .bar-our { background: #22c55e; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; font-size: 11px; font-weight: bold; color: #fff; }
+  .bar-competitor { background: #ef4444; display: flex; align-items: center; justify-content: flex-start; padding-left: 8px; font-size: 11px; font-weight: bold; color: #fff; }
+</style>
+</head>
+<body>
+
+<!-- TELA DE LOGIN -->
+<div id="screen-login" class="screen active">
+  <div class="login-box">
+    <div class="logo">Market<span>Map</span></div>
+    <div class="field-group"><div class="field-label">E-mail</div><input type="email" id="login-email" class="field-input" placeholder="seu@email.com"></div>
+    <div class="field-group"><div class="field-label">Senha</div><input type="password" id="login-pass" class="field-input" placeholder="••••••"></div>
+    <div id="login-err" class="login-err"></div>
+    <button class="btn-primary" onclick="doLogin()">Entrar</button>
+  </div>
+</div>
+
+<!-- APP PRINCIPAL -->
+<div id="screen-app" class="screen">
+  <div class="topbar">
+    <div class="topbar-logo">Market<span>Map</span></div>
+    <div class="role-badge" id="role-badge">Carregando...</div>
+    <button class="btn-icon" onclick="doLogout()">Sair</button>
+  </div>
+  <div class="tabs-row">
+    <button class="tab-btn active" onclick="switchTab('map',this)">🗺 Mapa</button>
+    <button class="tab-btn" onclick="switchTab('dashboard',this)">📊 Market Share</button>
+    <button class="tab-btn" onclick="switchTab('competitors',this)">⚠️ Concorrentes</button>
+    <button class="tab-btn" onclick="switchTab('admin',this)" id="admin-tab-btn" style="display:none">👥 Admin</button>
+  </div>
+
+  <div class="tab-content active" id="map-tab">
+    <div class="map-wrap">
+      <div class="map-container"><div id="google-map"></div><div class="map-legend">
+        <div><span class="legend-dot" style="background:#22c55e"></span> Cliente</div>
+        <div><span class="legend-dot" style="background:#f59e0b"></span> Ex-Cliente</div>
+        <div><span class="legend-dot" style="background:#a855f7"></span> Visitado</div>
+        <div><span class="legend-dot" style="background:#ef4444"></span> Concorrente</div>
+      </div></div>
+      <div class="map-sidebar">
+        <div class="search-bar">
+          <div class="search-type"><label><input type="radio" name="searchType" value="location" checked> 📍 Por local</label><label><input type="radio" name="searchType" value="company"> 🏢 Por nome</label></div>
+          <div class="search-row"><input type="text" id="search-input" class="search-input" placeholder="Ex: São Paulo, Av. Paulista"><button class="btn-search" onclick="searchBusinesses()">Buscar</button></div>
+          <div class="search-row"><input type="text" id="company-name-input" class="search-input" placeholder="Ex: Magazine Luiza" style="display:none"></div>
+        </div>
+        <div class="map-controls">
+          <button class="btn-sm active" onclick="filterByStatus('all',this)">Todas</button>
+          <button class="btn-sm" onclick="filterByStatus('customer',this)">Clientes</button>
+          <button class="btn-sm" onclick="filterByStatus('exclient',this)">Ex-Clientes</button>
+          <button class="btn-sm" onclick="filterByStatus('visited',this)">Visitadas</button>
+          <button class="btn-sm" onclick="filterByStatus('competitor',this)">Concorrentes</button>
+        </div>
+        <div class="company-list" id="company-list"><div style="padding:1rem;color:#64748b">Faça login e busque empresas</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="dashboard-tab"><div style="padding:1rem;overflow-y:auto;height:100%" id="dashboard-container"></div></div>
+  <div class="tab-content" id="competitors-tab"><div class="reports-container" id="competitors-container"></div></div>
+  <div class="tab-content" id="admin-tab"><div style="padding:1rem" id="admin-panel"></div></div>
+</div>
+
+<!-- MODAL EMPRESA - VERSÃO CORRIGIDA -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">🏢 Dados da Empresa</div><button class="modal-close" onclick="closeModal()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer">✕</button></div>
+    <div class="modal-body">
+      <!-- Informações básicas (somente leitura) -->
+      <div class="field-group"><div class="field-label">🏢 Nome da Empresa</div><input type="text" id="modal-name" class="field-input" readonly></div>
+      <div class="field-group"><div class="field-label">📍 Endereço</div><input type="text" id="modal-address" class="field-input" readonly></div>
+      
+      <hr style="border-color:#2d3a5e; margin:8px 0">
+      
+      <!-- SEÇÃO: SISTEMA E CONTABILIDADE -->
+      <div class="section-title">⚙️ INFORMAÇÕES DE SISTEMA E CONTABILIDADE</div>
+      <div class="field-group"><div class="field-label">💻 Sistema Utilizado *</div><input type="text" id="modal-system" class="field-input" placeholder="Ex: SAP, Omie, Nuvem Fiscal, ContaAzul..."></div>
+      <div class="field-group"><div class="field-label">👥 Contador Responsável *</div><input type="text" id="modal-counter" class="field-input" placeholder="Nome da contabilidade ou contador"></div>
+      
+      <hr style="border-color:#2d3a5e; margin:8px 0">
+      
+      <!-- SEÇÃO: CLASSIFICAÇÃO DA EMPRESA (CHECKBOX) -->
+      <div class="section-title">📊 CLASSIFICAÇÃO DA EMPRESA</div>
+      <div class="checkbox-group">
+        <label><input type="checkbox" id="check-customer"> ✅ É nosso CLIENTE atual</label>
+        <label><input type="checkbox" id="check-exclient"> ⚠️ É EX-CLIENTE (perdemos)</label>
+        <label><input type="checkbox" id="check-competitor"> 🏆 É CONCORRENTE</label>
+      </div>
+      <div style="font-size: 11px; color: #64748b; margin-top: 4px;">💡 Dica: Se for cliente, marque apenas "É nosso CLIENTE". Se for concorrente, marque apenas "É CONCORRENTE".</div>
+      
+      <!-- Campo para nome do concorrente (aparece apenas se marcar concorrente) -->
+      <div id="competitor-name-field" style="display:none">
+        <div class="field-group"><div class="field-label">🏆 Nome do Concorrente</div><input type="text" id="modal-competitor-name" class="field-input" placeholder="Ex: Empresa XYZ Sistemas"></div>
+        <div class="field-group"><div class="field-label">📝 Observações sobre o concorrente</div><input type="text" id="modal-competitor-notes" class="field-input" placeholder="Diferenciais, pontos fortes..."></div>
+      </div>
+      
+      <hr style="border-color:#2d3a5e; margin:8px 0">
+      
+      <!-- SEÇÃO: VISITA/PESQUISA -->
+      <div class="section-title">📍 STATUS DA PESQUISA</div>
+      <div class="checkbox-group">
+        <label><input type="checkbox" id="check-visited"> ✅ Esta empresa JÁ FOI visitada/pesquisada por nossa equipe</label>
+      </div>
+      
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm" onclick="closeModal()" style="background:#1f2840">Cancelar</button>
+      <button class="btn-sm" onclick="saveCompany()" style="background:#22c55e; color:#fff; font-weight:bold">💾 SALVAR EMPRESA</button>
+    </div>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<script>
+// ========== CONFIGURAÇÃO DO FIREBASE (SUBSTITUA PELA SUA) ==========
+const firebaseConfig = {
+  apiKey: "AIzaSyC8GsM4lOCEq54cvbyYCZc0lcmqCQH96F4",
+  authDomain: "marketmap-8fa2c.firebaseapp.com",
+  projectId: "marketmap-8fa2c",
+  storageBucket: "marketmap-8fa2c.appspot.com",
+  messagingSenderId: "527088854237",
+  appId: "1:527088854237:web:1234567890abcdef"
+};
+
+// Inicializar Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// ========== VARIÁVEIS GLOBAIS ==========
+let map, geocoder, markers = [], companiesList = [], currentPlace = null, currentFilter = 'all';
+let currentUser = null, currentUserRole = 'consultor';
+let placesService = null;
+let currentEditId = null;
+
+function showNotif(msg, type) {
+  const n = document.getElementById('notif');
+  n.textContent = msg;
+  n.className = `notif show ${type}`;
+  setTimeout(() => n.classList.remove('show'), 3000);
+}
+
+// ========== LOGIN ==========
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value.trim();
+  const errDiv = document.getElementById('login-err');
+  
+  if (!email || !pass) {
+    errDiv.innerHTML = 'Preencha e-mail e senha';
+    errDiv.style.display = 'block';
+    return;
+  }
+  
+  try {
+    const userCred = await auth.signInWithEmailAndPassword(email, pass);
+    currentUser = userCred.user;
+    
+    const userDoc = await db.collection('users').doc(currentUser.uid).get();
+    if (userDoc.exists) {
+      currentUserRole = userDoc.data().role || 'consultor';
+    } else {
+      await db.collection('users').doc(currentUser.uid).set({ email: currentUser.email, role: 'consultor' });
+      currentUserRole = 'consultor';
+    }
+    
+    document.getElementById('role-badge').textContent = currentUserRole.toUpperCase();
+    
+    if (currentUserRole === 'diretor') {
+      document.getElementById('admin-tab-btn').style.display = 'block';
+      loadAdminPanel();
+    }
+    
+    await loadCompaniesFromFirestore();
+    loadGoogleMaps();
+    
+  } catch (error) {
+    errDiv.innerHTML = 'Erro: ' + error.message;
+    errDiv.style.display = 'block';
+  }
+}
+
+function loadGoogleMaps() {
+  const apiKey = localStorage.getItem('mm_gkey');
+  if (!apiKey) {
+    const key = prompt('🔑 Digite sua chave da Google Maps API (obtenha em console.cloud.google.com):');
+    if (key && key.startsWith('AIza')) {
+      localStorage.setItem('mm_gkey', key);
+      loadGoogleMapsScript(key);
+    } else {
+      showNotif('Chave inválida', 'error');
+    }
+  } else {
+    loadGoogleMapsScript(apiKey);
+  }
+}
+
+function loadGoogleMapsScript(apiKey) {
+  const oldScript = document.querySelector('script[src*="maps.googleapis.com"]');
+  if (oldScript) oldScript.remove();
+  
+  window.initMapCallback = function() { initMap(); };
+  
+  const script = document.createElement('script');
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&callback=initMapCallback`;
+  script.async = true;
+  script.onerror = () => showNotif('Erro ao carregar mapa', 'error');
+  document.head.appendChild(script);
+}
+
+function initMap() {
+  document.getElementById('screen-login').classList.remove('active');
+  document.getElementById('screen-app').classList.add('active');
+  
+  map = new google.maps.Map(document.getElementById('google-map'), {
+    zoom: 12,
+    center: { lat: -23.5505, lng: -46.6333 },
+    mapTypeControl: true
+  });
+  geocoder = new google.maps.Geocoder();
+  placesService = new google.maps.places.PlacesService(map);
+  
+  loadMarkersOnMap();
+  updateDashboard();
+  updateCompetitorsList();
+  setupEventListeners();
+  showNotif('✅ Mapa carregado! Faça uma busca.', 'success');
+}
+
+// ========== FIRESTORE OPERATIONS ==========
+async function loadCompaniesFromFirestore() {
+  try {
+    const querySnapshot = await db.collection('companies').get();
+    companiesList = [];
+    querySnapshot.forEach(doc => {
+      companiesList.push({ id: doc.id, ...doc.data() });
+    });
+    console.log('Empresas carregadas:', companiesList.length);
+  } catch (error) {
+    console.error('Erro ao carregar:', error);
+    companiesList = [];
+  }
+}
+
+async function saveCompanyToFirestore(companyData) {
+  try {
+    if (currentEditId) {
+      await db.collection('companies').doc(currentEditId).update(companyData);
+      showNotif('✅ Empresa ATUALIZADA com sucesso!', 'success');
+    } else {
+      const newId = Date.now().toString();
+      companyData.id = newId;
+      await db.collection('companies').doc(newId).set(companyData);
+      showNotif('✅ Nova empresa SALVA com sucesso!', 'success');
+    }
+    await loadCompaniesFromFirestore();
+    loadMarkersOnMap();
+    updateDashboard();
+    updateCompetitorsList();
+    closeModal();
+  } catch (error) {
+    console.error('Erro ao salvar:', error);
+    showNotif('❌ Erro ao salvar: ' + error.message, 'error');
+  }
+}
+
+// ========== EXTRAIR LOCALIZAÇÃO ==========
+function extractStateAndCity(address) {
+  if (!address) return { state: 'N/I', city: 'N/I', stateName: 'Não identificado' };
+  const stateMatch = address.match(/([A-Z]{2})(?=\s|$|,)/);
+  let state = stateMatch ? stateMatch[1] : 'N/I';
+  let city = 'N/I';
+  const cityMatch = address.match(/([A-Za-zÀ-ÖØ-öø-ÿ\s]+?)\s*-\s*[A-Z]{2}/);
+  if (cityMatch) city = cityMatch[1].trim();
+  return { state, city, stateName: state };
+}
+
+// ========== DASHBOARD ==========
+function updateDashboard() {
+  const container = document.getElementById('dashboard-container');
+  if (!container) return;
+  
+  const clients = companiesList.filter(c => c.isCustomer === true);
+  const exClients = companiesList.filter(c => c.isExClient === true);
+  const competitors = companiesList.filter(c => c.isCompetitor === true);
+  const total = companiesList.length;
+  const marketShare = total > 0 ? ((clients.length / total) * 100).toFixed(1) : 0;
+  
+  let html = `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-number">${clients.length}</div><div>✅ Clientes</div></div>
+      <div class="stat-card"><div class="stat-number">${exClients.length}</div><div>⚠️ Ex-Clientes</div></div>
+      <div class="stat-card"><div class="stat-number">${competitors.length}</div><div>🏆 Concorrentes</div></div>
+      <div class="stat-card"><div class="stat-number">${total}</div><div>🏢 Total Mapeado</div></div>
+    </div>
+    <div class="competition-card">
+      <div class="stat-number">${marketShare}%</div>
+      <div>Market Share (Participação de Mercado)</div>
+      <div class="progress-bar"><div class="progress-fill" style="width: ${marketShare}%"></div></div>
+    </div>
+  `;
+  
+  // Sistemas mais usados
+  const systemStats = {};
+  clients.forEach(c => { if (c.system) systemStats[c.system] = (systemStats[c.system] || 0) + 1; });
+  if (Object.keys(systemStats).length > 0) {
+    html += `<div class="competition-card"><strong>⚙️ Sistemas mais utilizados pelos clientes</strong>`;
+    for (const [sys, count] of Object.entries(systemStats).sort((a,b) => b[1] - a[1]).slice(0,5)) {
+      html += `<div>${sys}: ${count} cliente(s)</div>`;
+    }
+    html += `</div>`;
+  }
+  
+  container.innerHTML = html;
+}
+
+// ========== MAPA ==========
+function loadMarkersOnMap() {
+  clearMarkers();
+  if (!map) return;
+  
+  companiesList.forEach(company => {
+    if (company.lat && company.lng) {
+      let color = '#6b7280';
+      if (company.isCustomer) color = '#22c55e';
+      else if (company.isExClient) color = '#f59e0b';
+      else if (company.isCompetitor) color = '#ef4444';
+      else if (company.isVisited) color = '#a855f7';
+      
+      const marker = new google.maps.Marker({
+        position: { lat: company.lat, lng: company.lng },
+        map: map,
+        title: company.name,
+        icon: { path: google.maps.SymbolPath.CIRCLE, fillColor: color, fillOpacity: 1, strokeWeight: 0, scale: 8 }
+      });
+      marker.addListener('click', () => openCompanyModal(company));
+      markers.push(marker);
+    }
+  });
+}
+
+function displaySearchResults(results) {
+  const listDiv = document.getElementById('company-list');
+  listDiv.innerHTML = '';
+  
+  results.forEach(place => {
+    if (!place.place_id) return;
+    const existing = companiesList.find(c => c.placeId === place.place_id);
+    let cardClass = 'company-card';
+    let statusTag = '';
+    
+    if (existing) {
+      if (existing.isCustomer) { cardClass += ' client'; statusTag = '<span class="tag tag-client">Cliente</span>'; }
+      else if (existing.isExClient) { cardClass += ' exclient'; statusTag = '<span class="tag tag-exclient">Ex-Cliente</span>'; }
+      else if (existing.isCompetitor) { cardClass += ' competitor'; statusTag = '<span class="tag tag-competitor">Concorrente</span>'; }
+      if (existing.isVisited) statusTag += '<span class="tag tag-visited">Visitada</span>';
+      if (existing.system && !existing.isCompetitor) statusTag += `<span class="tag tag-system">⚙️ ${existing.system}</span>`;
+      if (existing.counter && !existing.isCompetitor) statusTag += `<span class="tag tag-counter">📋 ${existing.counter}</span>`;
+    } else {
+      statusTag = '<span class="tag">➕ Clique para cadastrar</span>';
+    }
+    
+    const card = document.createElement('div');
+    card.className = cardClass;
+    card.innerHTML = `<div class="company-name">${place.name}</div><div class="company-addr">${place.formatted_address || place.vicinity || ''}</div><div class="company-tags">${statusTag}</div>`;
+    card.onclick = () => openCompanyModalFromPlace(place);
+    listDiv.appendChild(card);
+    
+    if (place.geometry && place.geometry.location) {
+      let color = '#6b7280';
+      if (existing) {
+        if (existing.isCustomer) color = '#22c55e';
+        else if (existing.isExClient) color = '#f59e0b';
+        else if (existing.isCompetitor) color = '#ef4444';
+        else if (existing.isVisited) color = '#a855f7';
+      }
+      const marker = new google.maps.Marker({
+        position: place.geometry.location,
+        map: map,
+        title: place.name,
+        icon: { path: google.maps.SymbolPath.CIRCLE, fillColor: color, fillOpacity: 1, strokeWeight: 0, scale: 8 }
+      });
+      marker.addListener('click', () => openCompanyModalFromPlace(place));
+      markers.push(marker);
+    }
+  });
+}
+
+async function searchBusinesses() {
+  const searchType = document.querySelector('input[name="searchType"]:checked').value;
+  let query = searchType === 'location' ? document.getElementById('search-input').value.trim() : document.getElementById('company-name-input').value.trim();
+  if (!query) { showNotif('Digite algo para buscar', 'error'); return; }
+  
+  clearMarkers();
+  showNotif('Buscando...', 'info');
+  
+  if (searchType === 'company') {
+    placesService.textSearch({ query, fields: ['name', 'formatted_address', 'geometry', 'place_id'], language: 'pt-BR' }, (res, status) => {
+      if (status === 'OK' && res.length) {
+        displaySearchResults(res);
+        if (res[0].geometry) map.setCenter(res[0].geometry.location);
+        map.setZoom(16);
+      } else { showNotif('Nenhuma empresa encontrada', 'error'); }
+    });
+  } else {
+    geocoder.geocode({ address: query + ', Brasil' }, (res, status) => {
+      if (status === 'OK' && res[0]) {
+        const loc = res[0].geometry.location;
+        map.setCenter(loc);
+        map.setZoom(14);
+        placesService.nearbySearch({ location: loc, radius: 2000, type: 'establishment' }, (res2, status2) => {
+          if (status2 === 'OK' && res2.length) displaySearchResults(res2);
+          else showNotif('Nenhuma empresa encontrada', 'error');
+        });
+      } else { showNotif('Local não encontrado', 'error'); }
+    });
+  }
+}
+
+// ========== MODAL - VERSÃO CORRIGIDA ==========
+function openCompanyModalFromPlace(place) {
+  currentPlace = place;
+  const existing = companiesList.find(c => c.placeId === place.place_id);
+  
+  document.getElementById('modal-name').value = place.name || '';
+  document.getElementById('modal-address').value = place.formatted_address || place.vicinity || '';
+  
+  // Preencher campos do formulário
+  document.getElementById('modal-system').value = existing?.system || '';
+  document.getElementById('modal-counter').value = existing?.counter || '';
+  
+  // Checkboxes de classificação
+  document.getElementById('check-customer').checked = existing?.isCustomer || false;
+  document.getElementById('check-exclient').checked = existing?.isExClient || false;
+  document.getElementById('check-competitor').checked = existing?.isCompetitor || false;
+  document.getElementById('check-visited').checked = existing?.isVisited || false;
+  
+  // Campo concorrente  document.getElementById('modal-competitor-name').value = existing?.competitorName || '';
+  document.getElementById('modal-competitor-notes').value = existing?.competitorNotes || '';
+  
+  // Mostrar/esconder campo de concorrente
+  const competitorField = document.getElementById('competitor-name-field');
+  competitorField.style.display = document.getElementById('check-competitor').checked ? 'block' : 'none';
+  
+  currentEditId = existing?.id || null;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function openCompanyModal(company) {
+  currentPlace = null;
+  
+  document.getElementById('modal-name').value = company.name || '';
+  document.getElementById('modal-address').value = company.address || '';
+  
+  document.getElementById('modal-system').value = company.system || '';
+  document.getElementById('modal-counter').value = company.counter || '';
+  
+  document.getElementById('check-customer').checked = company.isCustomer || false;
+  document.getElementById('check-exclient').checked = company.isExClient || false;
+  document.getElementById('check-competitor').checked = company.isCompetitor || false;
+  document.getElementById('check-visited').checked = company.isVisited || false;
+  
+  document.getElementById('modal-competitor-name').value = company.competitorName || '';
+  document.getElementById('modal-competitor-notes').value = company.competitorNotes || '';
+  
+  const competitorField = document.getElementById('competitor-name-field');
+  competitorField.style.display = company.isCompetitor ? 'block' : 'none';
+  
+  currentEditId = company.id || null;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+// Event listener para mostrar/esconder campo de concorrente
+document.getElementById('check-competitor').addEventListener('change', function() {
+  const competitorField = document.getElementById('competitor-name-field');
+  competitorField.style.display = this.checked ? 'block' : 'none';
+});
+
+// Impedir seleção múltipla conflitante
+document.getElementById('check-customer').addEventListener('change', function() {
+  if (this.checked) {
+    document.getElementById('check-exclient').checked = false;
+    document.getElementById('check-competitor').checked = false;
+    document.getElementById('competitor-name-field').style.display = 'none';
+  }
+});
+
+document.getElementById('check-exclient').addEventListener('change', function() {
+  if (this.checked) {
+    document.getElementById('check-customer').checked = false;
+    document.getElementById('check-competitor').checked = false;
+    document.getElementById('competitor-name-field').style.display = 'none';
+  }
+});
+
+async function saveCompany() {
+  // Validar campos obrigatórios
+  const system = document.getElementById('modal-system').value.trim();
+  const counter = document.getElementById('modal-counter').value.trim();
+  
+  if (!system || !counter) {
+    showNotif('❌ Preencha o SISTEMA e o CONTADOR!', 'error');
+    return;
+  }
+  
+  const isCustomer = document.getElementById('check-customer').checked;
+  const isExClient = document.getElementById('check-exclient').checked;
+  const isCompetitor = document.getElementById('check-competitor').checked;
+  const isVisited = document.getElementById('check-visited').checked;
+  
+  // Validar classificação
+  if (!isCustomer && !isExClient && !isCompetitor) {
+    showNotif('❌ Selecione a classificação da empresa (Cliente, Ex-Cliente ou Concorrente)', 'error');
+    return;
+  }
+  
+  // Se for concorrente, validar nome
+  let competitorName = null;
+  let competitorNotes = null;
+  if (isCompetitor) {
+    competitorName = document.getElementById('modal-competitor-name').value.trim();
+    if (!competitorName) {
+      showNotif('❌ Informe o nome do concorrente', 'error');
+      return;
+    }
+    competitorNotes = document.getElementById('modal-competitor-notes').value.trim();
+  }
+  
+  let companyData = {};
+  
+  if (currentPlace) {
+    // Nova empresa a partir da busca
+    companyData = {
+      placeId: currentPlace.place_id,
+      name: document.getElementById('modal-name').value,
+      address: document.getElementById('modal-address').value,
+      lat: currentPlace.geometry?.location?.lat() || 0,
+      lng: currentPlace.geometry?.location?.lng() || 0,
+      system: system,
+      counter: counter,
+      isCustomer: isCustomer,
+      isExClient: isExClient,
+      isCompetitor: isCompetitor,
+      isVisited: isVisited,
+      competitorName: competitorName,
+      competitorNotes: competitorNotes,
+      updatedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString()
+    };
+  } else {
+    // Editando empresa existente
+    companyData = {
+      system: system,
+      counter: counter,
+      isCustomer: isCustomer,
+      isExClient: isExClient,
+      isCompetitor: isCompetitor,
+      isVisited: isVisited,
+      competitorName: competitorName,
+      competitorNotes: competitorNotes,
+      updatedAt: new Date().toISOString()
+    };
+  }
+  
+  await saveCompanyToFirestore(companyData);
+}
+
+function updateCompetitorsList() {
+  const container = document.getElementById('competitors-container');
+  if (!container) return;
+  
+  const competitors = companiesList.filter(c => c.isCompetitor === true);
+  if (competitors.length === 0) {
+    container.innerHTML = '<div class="competition-card"><div style="text-align:center;color:#64748b">Nenhum concorrente mapeado ainda</div></div>';
+    return;
+  }
+  
+  let html = `<div class="stats-grid"><div class="stat-card"><div class="stat-number">${competitors.length}</div><div>Concorrentes Mapeados</div></div></div>`;
+  competitors.forEach(comp => {
+    html += `<div class="competition-card" style="cursor:pointer" onclick='openCompanyModal(${JSON.stringify(comp).replace(/'/g, "\\'")})'>
+      <strong>🏆 ${comp.name}</strong>
+      <div style="font-size:12px;color:#64748b">${comp.address || 'Endereço não informado'}</div>
+      ${comp.competitorName ? `<div style="font-size:12px;color:#ef4444;margin-top:4px">📌 Identificado como: ${comp.competitorName}</div>` : ''}
+      ${comp.competitorNotes ? `<div style="font-size:11px;color:#a855f7;margin-top:4px">📝 ${comp.competitorNotes}</div>` : ''}
+      ${comp.isVisited ? `<div style="font-size:11px;color:#a855f7;margin-top:4px">✅ Já pesquisado/visitado</div>` : ''}
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
+// ========== ADMIN PANEL ==========
+async function loadAdminPanel() {
+  const panel = document.getElementById('admin-panel');
+  if (!panel) return;
+  
+  try {
+    const usersSnapshot = await db.collection('users').get();
+    let html = '<div class="competition-card"><strong>👥 Usuários do Sistema</strong><table style="width:100%;margin-top:10px"><tr><th>Email</th><th>Função</th><th>Ações</th></tr>';
+    usersSnapshot.forEach(doc => {
+      const user = doc.data();
+      html += `<tr><td>${user.email}</td><td><select id="role-${doc.id}" class="field-input" style="width:100px;padding:4px"><option ${user.role==='diretor'?'selected':''}>diretor</option><option ${user.role==='gerente'?'selected':''}>gerente</option><option ${user.role==='consultor'?'selected':''}>consultor</option></select></td><td><button class="btn-sm" onclick="updateUserRole('${doc.id}')">Salvar</button></td></tr>`;
+    });
+    html += '</table></div><div class="competition-card"><strong>➕ Adicionar Usuário</strong><div class="search-row" style="margin-top:8px"><input type="email" id="new-user-email" placeholder="Email" class="field-input"><input type="password" id="new-user-pass" placeholder="Senha" class="field-input"><select id="new-user-role" class="field-input" style="width:100px"><option>consultor</option><option>gerente</option><option>diretor</option></select><button class="btn-sm" onclick="createNewUser()" style="background:#3b82f6;color:#fff">Criar</button></div></div>';
+    panel.innerHTML = html;
+  } catch (error) {
+    panel.innerHTML = '<div class="competition-card">Erro ao carregar usuários</div>';
+  }
+}
+
+window.updateUserRole = async function(userId) {
+  const newRole = document.getElementById(`role-${userId}`).value;
+  await db.collection('users').doc(userId).update({ role: newRole });
+  showNotif('Função atualizada!', 'success');
+};
+
+window.createNewUser = async function() {
+  const email = document.getElementById('new-user-email').value;
+  const pass = document.getElementById('new-user-pass').value;
+  const role = document.getElementById('new-user-role').value;
+  if (!email || !pass) { showNotif('Preencha email e senha', 'error'); return; }
+  
+  try {
+    const userCred = await auth.createUserWithEmailAndPassword(email, pass);
+    await db.collection('users').doc(userCred.user.uid).set({ email, role });
+    showNotif('Usuário criado!', 'success');
+    loadAdminPanel();
+  } catch (error) {
+    showNotif('Erro: ' + error.message, 'error');
+  }
+};
+
+// ========== UTILITÁRIOS ==========
+function clearMarkers() { markers.forEach(m => m.setMap(null)); markers = []; }
+function filterByStatus(status, btn) {
+  currentFilter = status;
+  document.querySelectorAll('.map-controls .btn-sm').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const cards = document.querySelectorAll('.company-card');
+  cards.forEach(card => {
+    const tags = card.querySelector('.company-tags')?.innerHTML || '';
+    if (status === 'all') card.style.display = 'block';
+    else if (status === 'customer' && tags.includes('Cliente')) card.style.display = 'block';
+    else if (status === 'exclient' && tags.includes('Ex-Cliente')) card.style.display = 'block';
+    else if (status === 'competitor' && tags.includes('Concorrente')) card.style.display = 'block';
+    else if (status === 'visited' && tags.includes('Visitada')) card.style.display = 'block';
+    else card.style.display = 'none';
+  });
+}
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); currentPlace = null; currentEditId = null; }
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(tab + '-tab').classList.add('active');
+  if (tab === 'dashboard') updateDashboard();
+  if (tab === 'competitors') updateCompetitorsList();
+  if (tab === 'admin' && currentUserRole === 'diretor') loadAdminPanel();
+}
+function doLogout() { auth.signOut(); location.reload(); }
+function setupEventListeners() {
+  const rloc = document.querySelector('input[value="location"]');
+  const rcomp = document.querySelector('input[value="company"]');
+  const sinp = document.getElementById('search-input');
+  const cinp = document.getElementById('company-name-input');
+  if (rloc && rcomp) {
+    rloc.onchange = () => { sinp.style.display = 'block'; cinp.style.display = 'none'; };
+    rcomp.onchange = () => { sinp.style.display = 'none'; cinp.style.display = 'block'; };
+  }
+  document.getElementById('search-input')?.addEventListener('keypress', e => { if (e.key === 'Enter') searchBusinesses(); });
+  document.getElementById('company-name-input')?.addEventListener('keypress', e => { if (e.key === 'Enter') searchBusinesses(); });
+}
+
+// Inicializar
+auth.onAuthStateChanged((user) => {
+  if (user && document.getElementById('screen-app').classList.contains('active')) return;
+  if (user) {
+    currentUser = user;
+    loadCompaniesFromFirestore().then(() => { loadGoogleMaps(); });
+  }
+});
+</script>
+</body>
+</html>
