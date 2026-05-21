@@ -2,798 +2,1715 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>MarketMap — Relatórios de Concorrentes</title>
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-<!-- Chart.js para gráficos -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ProspectFlow CRM - Sistema Profissional</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0b0d13; color: #f1f5f9; height: 100vh; overflow: hidden; }
-  .screen { display: none; width: 100%; height: 100vh; }
-  .screen.active { display: flex; }
-  #screen-login { align-items: center; justify-content: center; background: #0b0d13; }
-  .login-box { width: 100%; max-width: 400px; padding: 2rem; background: #1a2035; border-radius: 16px; }
-  .logo { text-align: center; margin-bottom: 2rem; font-size: 28px; font-weight: bold; }
-  .logo span { color: #3b82f6; }
-  .field-group { margin-bottom: 1rem; }
-  .field-label { font-size: 12px; color: #94a3b8; margin-bottom: 6px; }
-  .field-input { width: 100%; background: #111520; border: 1px solid #2d3a5e; border-radius: 10px; padding: 12px; color: #fff; font-size: 14px; }
-  .btn-primary { width: 100%; padding: 12px; background: #3b82f6; border: none; border-radius: 10px; color: #fff; font-weight: bold; cursor: pointer; }
-  .btn-primary:hover { opacity: 0.9; }
-  .login-err { color: #ef4444; font-size: 13px; margin-top: 10px; display: none; }
-  #screen-app { flex-direction: column; }
-  .topbar { height: 56px; background: #111520; border-bottom: 1px solid #2d3a5e; display: flex; align-items: center; padding: 0 1rem; gap: 1rem; flex-shrink: 0; }
-  .topbar-logo { font-weight: bold; font-size: 18px; margin-right: auto; }
-  .topbar-logo span { color: #3b82f6; }
-  .role-badge { background: #3b82f6; padding: 4px 12px; border-radius: 20px; font-size: 12px; }
-  .btn-icon { background: none; border: 1px solid #2d3a5e; border-radius: 8px; color: #94a3b8; padding: 6px 12px; cursor: pointer; }
-  .btn-icon:hover { background: #1a2035; color: #fff; }
-  .tabs-row { display: flex; background: #111520; border-bottom: 1px solid #2d3a5e; padding: 0 1rem; gap: 0; overflow-x: auto; flex-shrink: 0; }
-  .tab-btn { padding: 12px 20px; background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 14px; border-bottom: 2px solid transparent; white-space: nowrap; }
-  .tab-btn.active { color: #3b82f6; border-bottom-color: #3b82f6; }
-  .tab-content { display: none; flex: 1; overflow: hidden; }
-  .tab-content.active { display: flex; flex-direction: column; }
-  .map-wrap { display: flex; flex: 1; min-height: 0; }
-  .map-container { flex: 1; position: relative; }
-  #google-map { width: 100%; height: 100%; }
-  .map-sidebar { width: 420px; background: #111520; border-left: 1px solid #2d3a5e; display: flex; flex-direction: column; overflow: hidden; }
-  .search-bar { padding: 1rem; border-bottom: 1px solid #2d3a5e; }
-  .search-row { display: flex; gap: 8px; margin-top: 8px; }
-  .search-input { flex: 1; background: #0b0d13; border: 1px solid #2d3a5e; border-radius: 8px; padding: 8px 12px; color: #fff; }
-  .btn-search { background: #3b82f6; border: none; border-radius: 8px; padding: 8px 16px; color: #fff; cursor: pointer; }
-  .search-type { display: flex; gap: 1rem; margin-bottom: 8px; }
-  .search-type label { display: flex; align-items: center; gap: 5px; font-size: 12px; cursor: pointer; }
-  .map-controls { padding: 0.75rem; border-bottom: 1px solid #2d3a5e; display: flex; flex-wrap: wrap; gap: 8px; }
-  .btn-sm { padding: 4px 12px; background: #1a2035; border: 1px solid #2d3a5e; border-radius: 20px; color: #94a3b8; cursor: pointer; font-size: 12px; }
-  .btn-sm.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
-  .company-list { flex: 1; overflow-y: auto; padding: 0.5rem; }
-  .company-card { background: #1a2035; border-radius: 10px; padding: 12px; margin-bottom: 8px; cursor: pointer; border-left: 3px solid #6b7280; }
-  .company-card.client { border-left-color: #22c55e; }
-  .company-card.exclient { border-left-color: #f59e0b; }
-  .company-card.competitor { border-left-color: #ef4444; }
-  .company-card.visited { border-left-color: #a855f7; }
-  .company-name { font-weight: 600; font-size: 14px; }
-  .company-addr { font-size: 11px; color: #64748b; margin-top: 4px; }
-  .company-tags { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
-  .tag { font-size: 10px; padding: 2px 8px; border-radius: 20px; }
-  .tag-client { background: rgba(34,197,94,0.2); color: #22c55e; }
-  .tag-exclient { background: rgba(245,158,11,0.2); color: #f59e0b; }
-  .tag-competitor { background: rgba(239,68,68,0.2); color: #ef4444; }
-  .tag-visited { background: rgba(168,85,247,0.2); color: #a855f7; }
-  .tag-system { background: rgba(59,130,246,0.2); color: #60a5fa; }
-  .map-legend { position: absolute; bottom: 20px; left: 20px; background: #1a2035; border-radius: 10px; padding: 8px 12px; z-index: 10; font-size: 11px; }
-  .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
-  .modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 1000; }
-  .modal-overlay.open { display: flex; }
-  .modal { background: #1a2035; border-radius: 16px; width: 90%; max-width: 550px; max-height: 85vh; overflow-y: auto; }
-  .modal-header { padding: 1.5rem; border-bottom: 1px solid #2d3a5e; display: flex; justify-content: space-between; align-items: center; }
-  .modal-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
-  .modal-footer { padding: 1.5rem; border-top: 1px solid #2d3a5e; display: flex; gap: 1rem; justify-content: flex-end; }
-  .checkbox-group { display: flex; gap: 1.5rem; flex-wrap: wrap; margin: 8px 0; }
-  .checkbox-group label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; }
-  .section-title { font-size: 13px; font-weight: 600; color: #60a5fa; margin-bottom: 8px; border-bottom: 1px solid #2d3a5e; padding-bottom: 4px; }
-  .notif { position: fixed; bottom: 20px; right: 20px; background: #1a2035; border-radius: 10px; padding: 12px 20px; display: none; z-index: 2000; }
-  .notif.show { display: block; }
-  .notif.success { border-left: 3px solid #22c55e; }
-  .notif.error { border-left: 3px solid #ef4444; }
-  
-  /* Relatórios */
-  .reports-container { padding: 1rem; overflow-y: auto; height: 100%; }
-  .filter-bar { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; padding: 1rem; background: #111520; border-radius: 12px; align-items: flex-end; }
-  .filter-group { display: flex; flex-direction: column; gap: 6px; min-width: 160px; }
-  .filter-group label { font-size: 11px; color: #94a3b8; font-weight: 500; }
-  .filter-select, .filter-input { background: #0b0d13; border: 1px solid #2d3a5e; border-radius: 8px; padding: 10px 12px; color: #fff; font-size: 13px; }
-  .filter-input { width: 100%; }
-  .report-card { background: #1a2035; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; }
-  .report-title { font-size: 16px; font-weight: bold; margin-bottom: 1rem; color: #60a5fa; display: flex; align-items: center; gap: 8px; }
-  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
-  .stat-card { background: #111520; border-radius: 12px; padding: 1rem; text-align: center; }
-  .stat-number { font-size: 32px; font-weight: bold; color: #ef4444; }
-  .company-row { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #2d3a5e; cursor: pointer; transition: background 0.2s; }
-  .company-row:hover { background: #1f2840; }
-  .badge { padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 500; }
-  .badge-competitor { background: rgba(239,68,68,0.2); color: #ef4444; }
-  .badge-location { background: rgba(59,130,246,0.2); color: #60a5fa; }
-  .empty-state { text-align: center; padding: 2rem; color: #64748b; }
-  .competitor-name { font-weight: 600; color: #ef4444; }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --primary-light: #818cf8;
+  --secondary: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #3b82f6;
+  --dark: #0f172a;
+  --darker: #020617;
+  --gray-100: #f1f5f9;
+  --gray-200: #e2e8f0;
+  --gray-300: #cbd5e1;
+  --gray-400: #94a3b8;
+  --gray-500: #64748b;
+  --gray-600: #475569;
+  --gray-700: #334155;
+  --gray-800: #1e293b;
+  --gray-900: #0f172a;
+  --sidebar-width: 280px;
+  --header-height: 70px;
+  --border-radius: 16px;
+  --transition: all 0.3s ease;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  color: var(--gray-800);
+}
+
+/* Auth Screen */
+.auth-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.auth-screen.hidden {
+  display: none;
+}
+
+.auth-card {
+  background: white;
+  border-radius: 32px;
+  padding: 48px;
+  width: 100%;
+  max-width: 460px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  text-align: center;
+}
+
+.auth-icon {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+  font-size: 40px;
+  color: white;
+}
+
+.auth-title {
+  font-size: 28px;
+  font-weight: 800;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.auth-sub {
+  color: var(--gray-500);
+  margin-bottom: 32px;
+}
+
+.auth-input {
+  width: 100%;
+  padding: 14px 18px;
+  border: 2px solid var(--gray-200);
+  border-radius: 16px;
+  font-size: 14px;
+  transition: var(--transition);
+  margin-bottom: 16px;
+}
+
+.auth-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.btn-auth {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-auth:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(102, 126, 234, 0.4);
+}
+
+/* Main App */
+#app-main {
+  display: none;
+}
+
+.app-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 280px;
+  background: var(--gray-900);
+  backdrop-filter: blur(10px);
+  padding: 24px 20px;
+  position: fixed;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 100;
+}
+
+.logo-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 24px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.logo-icon {
+  width: 45px;
+  height: 45px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.logo-text {
+  font-size: 20px;
+  font-weight: 800;
+  color: white;
+}
+
+.logo-text span {
+  background: linear-gradient(135deg, #a78bfa 0%, #c084fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  color: var(--gray-400);
+  cursor: pointer;
+  transition: var(--transition);
+  margin-bottom: 6px;
+}
+
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+}
+
+.nav-item.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.nav-item i {
+  width: 20px;
+  font-size: 18px;
+}
+
+/* Main Content */
+.main-content {
+  flex: 1;
+  margin-left: 280px;
+  padding: 24px 32px;
+}
+
+/* Top Bar */
+.top-bar {
+  background: white;
+  border-radius: 20px;
+  padding: 16px 24px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.page-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--gray-800);
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.user-avatar {
+  width: 45px;
+  height: 45px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.user-name {
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+/* Cards */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 20px;
+  padding: 20px;
+  transition: var(--transition);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -12px rgba(0, 0, 0, 0.15);
+}
+
+.stat-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  margin-bottom: 16px;
+}
+
+.stat-icon.blue { background: #eff6ff; color: #3b82f6; }
+.stat-icon.green { background: #ecfdf5; color: #10b981; }
+.stat-icon.purple { background: #f5f3ff; color: #8b5cf6; }
+.stat-icon.orange { background: #fff7ed; color: #f59e0b; }
+
+.stat-value {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--gray-800);
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: var(--gray-500);
+}
+
+.stat-change {
+  font-size: 12px;
+  margin-top: 8px;
+  color: var(--gray-400);
+}
+
+/* Content Card */
+.content-card {
+  background: white;
+  border-radius: 24px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--gray-800);
+}
+
+/* Buttons */
+.btn {
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  border: none;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px -5px rgba(102, 126, 234, 0.4);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--gray-300);
+  color: var(--gray-600);
+}
+
+.btn-outline:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* Tables */
+.table-container {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th {
+  text-align: left;
+  padding: 14px 16px;
+  background: var(--gray-50);
+  font-weight: 600;
+  color: var(--gray-600);
+  font-size: 13px;
+}
+
+.data-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--gray-200);
+  color: var(--gray-700);
+}
+
+/* Tags */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.tag-success { background: #ecfdf5; color: #10b981; }
+.tag-warning { background: #fffbeb; color: #f59e0b; }
+.tag-danger { background: #fef2f2; color: #ef4444; }
+.tag-info { background: #eff6ff; color: #3b82f6; }
+.tag-purple { background: #f5f3ff; color: #8b5cf6; }
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  display: none;
+}
+
+.modal {
+  background: white;
+  border-radius: 32px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  padding: 24px;
+  border-bottom: 1px solid var(--gray-200);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.modal-footer {
+  padding: 20px 24px;
+  border-top: 1px solid var(--gray-200);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* Form */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: var(--gray-700);
+}
+
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--gray-300);
+  border-radius: 12px;
+  font-size: 14px;
+  transition: var(--transition);
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* Toast */
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1100;
+}
+
+.toast {
+  background: white;
+  border-radius: 12px;
+  padding: 12px 20px;
+  margin-top: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Pipeline Board */
+.pipeline-board {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.pipeline-column {
+  background: var(--gray-50);
+  border-radius: 20px;
+  padding: 16px;
+}
+
+.pipeline-header {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--gray-600);
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.pipeline-card {
+  background: white;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.pipeline-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Calendar */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.calendar-day {
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: 12px;
+  padding: 12px;
+  min-height: 100px;
+}
+
+.calendar-day-number {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.calendar-event {
+  background: #eff6ff;
+  color: #3b82f6;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  margin-bottom: 4px;
+  cursor: pointer;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .sidebar { width: 240px; }
+  .main-content { margin-left: 240px; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); position: fixed; }
+  .main-content { margin-left: 0; }
+  .stats-grid { grid-template-columns: 1fr; }
+  .pipeline-board { grid-template-columns: 1fr; }
+}
 </style>
 </head>
 <body>
 
-<!-- TELA DE LOGIN -->
-<div id="screen-login" class="screen active">
-  <div class="login-box">
-    <div class="logo">Market<span>Map</span></div>
-    <div class="field-group"><div class="field-label">E-mail</div><input type="email" id="login-email" class="field-input" placeholder="seu@email.com" value="admin@marketmap.com"></div>
-    <div class="field-group"><div class="field-label">Senha</div><input type="password" id="login-pass" class="field-input" placeholder="••••••" value="admin123"></div>
-    <div id="login-err" class="login-err"></div>
-    <button class="btn-primary" onclick="doLogin()">Entrar</button>
+<!-- AUTH SCREEN -->
+<div class="auth-screen" id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-icon">
+      <i class="fas fa-chart-line"></i>
+    </div>
+    <h1 class="auth-title">ProspectFlow CRM</h1>
+    <p class="auth-sub">Sistema inteligente de gestão de vendas</p>
+    <div id="auth-error" style="display:none; background:#fef2f2; color:#ef4444; padding:12px; border-radius:12px; margin-bottom:16px"></div>
+    <input type="text" class="auth-input" id="auth-user" placeholder="Usuário" value="admin">
+    <input type="password" class="auth-input" id="auth-pass" placeholder="Senha" value="1234">
+    <button class="btn-auth" onclick="doLogin()">
+      <i class="fas fa-arrow-right-to-bracket"></i> Entrar
+    </button>
   </div>
 </div>
 
-<!-- APP PRINCIPAL -->
-<div id="screen-app" class="screen">
-  <div class="topbar">
-    <div class="topbar-logo">Market<span>Map</span></div>
-    <div class="role-badge" id="role-badge">Carregando...</div>
-    <button class="btn-icon" onclick="doLogout()">Sair</button>
-  </div>
-  <div class="tabs-row">
-    <button class="tab-btn active" onclick="switchTab('map',this)">🗺 Mapa</button>
-    <button class="tab-btn" onclick="switchTab('market',this)">📊 Market Share</button>
-    <button class="tab-btn" onclick="switchTab('reports',this)">📈 Relatórios</button>
-    <button class="tab-btn" onclick="switchTab('competitors',this)">⚠️ Concorrentes</button>
-    <button class="tab-btn" onclick="switchTab('admin',this)" id="admin-tab-btn" style="display:none">👥 Admin</button>
-  </div>
+<!-- MAIN APP -->
+<div id="app-main">
+  <div class="app-container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="logo-area">
+        <div class="logo-icon">🎯</div>
+        <div class="logo-text">Prospect<span>Flow</span></div>
+      </div>
+      <div class="nav-item active" data-page="dash" onclick="goToPage('dash')">
+        <i class="fas fa-chart-pie"></i> <span>Dashboard</span>
+      </div>
+      <div class="nav-item" data-page="leads" onclick="goToPage('leads')">
+        <i class="fas fa-users"></i> <span>Leads</span>
+      </div>
+      <div class="nav-item" data-page="pipe" onclick="goToPage('pipe')">
+        <i class="fas fa-funnel-dollar"></i> <span>Pipeline</span>
+      </div>
+      <div class="nav-item" data-page="agenda" onclick="goToPage('agenda')">
+        <i class="fas fa-calendar"></i> <span>Agenda</span>
+      </div>
+      <div class="nav-item" data-page="metas" onclick="goToPage('metas')">
+        <i class="fas fa-trophy"></i> <span>Metas</span>
+      </div>
+      <div class="nav-item" data-page="rm" onclick="goToPage('rm')">
+        <i class="fas fa-envelope-open-text"></i> <span>Remarketing</span>
+      </div>
+      <div class="nav-item" data-page="campanhas" onclick="goToPage('campanhas')">
+        <i class="fas fa-bullhorn"></i> <span>Campanhas</span>
+      </div>
+      <div class="nav-item" data-page="import" onclick="goToPage('import')">
+        <i class="fas fa-file-import"></i> <span>Importar</span>
+      </div>
+      <div class="nav-item" data-page="email" onclick="goToPage('email')">
+        <i class="fas fa-envelope"></i> <span>E-mails</span>
+      </div>
+      <div class="nav-item" data-page="rel" onclick="goToPage('rel')">
+        <i class="fas fa-chart-line"></i> <span>Relatórios</span>
+      </div>
+      <div class="nav-item" data-page="usuarios" onclick="goToPage('usuarios')">
+        <i class="fas fa-user-shield"></i> <span>Usuários</span>
+      </div>
+    </div>
 
-  <!-- MAPA -->
-  <div class="tab-content active" id="map-tab">
-    <div class="map-wrap">
-      <div class="map-container"><div id="google-map"></div><div class="map-legend">
-        <div><span class="legend-dot" style="background:#22c55e"></span> Cliente</div>
-        <div><span class="legend-dot" style="background:#f59e0b"></span> Ex-Cliente</div>
-        <div><span class="legend-dot" style="background:#a855f7"></span> Visitado</div>
-        <div><span class="legend-dot" style="background:#ef4444"></span> Concorrente</div>
-      </div></div>
-      <div class="map-sidebar">
-        <div class="search-bar">
-          <div class="search-type">
-            <label><input type="radio" name="searchType" value="location" checked> 📍 Por Cidade/Bairro/Rua</label>
-            <label><input type="radio" name="searchType" value="company"> 🏢 Por Nome da Empresa</label>
+    <!-- Main Content -->
+    <div class="main-content">
+      <div class="top-bar">
+        <h2 class="page-title" id="page-title">Dashboard</h2>
+        <div class="user-info">
+          <span class="user-name" id="user-name">Admin</span>
+          <div class="user-avatar" id="user-avatar">A</div>
+          <button class="btn btn-outline" onclick="doLogout()" style="padding:8px 16px">
+            <i class="fas fa-sign-out-alt"></i> Sair
+          </button>
+        </div>
+      </div>
+
+      <!-- DASHBOARD -->
+      <div id="page-dash" class="page">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon blue"><i class="fas fa-users"></i></div>
+            <div class="stat-value" id="stat-total-leads">0</div>
+            <div class="stat-label">Total de Leads</div>
+            <div class="stat-change"><i class="fas fa-chart-line"></i> Cadastrados</div>
           </div>
-          <div class="search-row">
-            <input type="text" id="search-input" class="search-input" placeholder="Ex: São Paulo, Av. Paulista">
-            <button class="btn-search" onclick="searchBusinesses()">🔎 Buscar</button>
+          <div class="stat-card">
+            <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+            <div class="stat-value" id="stat-fechamentos">0</div>
+            <div class="stat-label">Fechamentos</div>
+            <div class="stat-change"><i class="fas fa-chart-line"></i> Vendas realizadas</div>
           </div>
-          <div class="search-row">
-            <input type="text" id="company-name-input" class="search-input" placeholder="Ex: Google Brasil" style="display:none">
+          <div class="stat-card">
+            <div class="stat-icon purple"><i class="fas fa-dollar-sign"></i></div>
+            <div class="stat-value" id="stat-receita">R$ 0</div>
+            <div class="stat-label">Receita Total</div>
+            <div class="stat-change"><i class="fas fa-chart-line"></i> Implantação + MRR</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon orange"><i class="fas fa-percent"></i></div>
+            <div class="stat-value" id="stat-conversao">0%</div>
+            <div class="stat-label">Taxa de Conversão</div>
+            <div class="stat-change"><i class="fas fa-chart-line"></i> Leads → Vendas</div>
           </div>
         </div>
-        <div class="map-controls">
-          <button class="btn-sm active" onclick="filterByStatus('all',this)">Todas</button>
-          <button class="btn-sm" onclick="filterByStatus('customer',this)">Clientes</button>
-          <button class="btn-sm" onclick="filterByStatus('exclient',this)">Ex-Clientes</button>
-          <button class="btn-sm" onclick="filterByStatus('visited',this)">Visitadas</button>
-          <button class="btn-sm" onclick="filterByStatus('competitor',this)">Concorrentes</button>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+          <div class="content-card">
+            <div class="card-header">
+              <h3 class="card-title"><i class="fas fa-chart-simple"></i> Desempenho de Vendas</h3>
+              <span class="tag tag-info">Este mês</span>
+            </div>
+            <canvas id="sales-chart" height="200"></canvas>
+          </div>
+          <div class="content-card">
+            <div class="card-header">
+              <h3 class="card-title"><i class="fas fa-chart-pie"></i> Leads por Status</h3>
+            </div>
+            <canvas id="status-chart" height="200"></canvas>
+          </div>
         </div>
-        <div class="company-list" id="company-list"><div style="padding:1rem;color:#64748b">Faça login e busque empresas</div></div>
+
+        <div class="content-card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-trophy"></i> Meta Global</h3>
+          </div>
+          <div id="meta-progress"></div>
+        </div>
+      </div>
+
+      <!-- LEADS -->
+      <div id="page-leads" class="page" style="display:none">
+        <div class="content-card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-users"></i> Gestão de Leads</h3>
+            <button class="btn btn-primary" onclick="openLeadModal()"><i class="fas fa-plus"></i> Novo Lead</button>
+          </div>
+          <input type="text" class="form-input" placeholder="🔍 Buscar leads..." style="margin-bottom: 20px;" oninput="filterLeads()" id="search-leads">
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr><th>Empresa</th><th>Segmento</th><th>Produto</th><th>Status</th><th>Etapa</th><th>Responsável</th><th>Ações</th>
+              </tr></thead>
+              <tbody id="leads-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PIPELINE -->
+      <div id="page-pipe" class="page" style="display:none">
+        <div class="content-card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-funnel-dollar"></i> Pipeline de Vendas</h3>
+          </div>
+          <div class="pipeline-board" id="pipeline-board"></div>
+        </div>
+      </div>
+
+      <!-- AGENDA -->
+      <div id="page-agenda" class="page" style="display:none">
+        <div class="content-card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-calendar"></i> Agenda</h3>
+            <button class="btn btn-primary" onclick="openAgendaModal()"><i class="fas fa-plus"></i> Agendar</button>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <button class="btn btn-outline" onclick="changeMonth(-1)"><i class="fas fa-chevron-left"></i></button>
+                <span id="calendar-month" style="font-weight: 600;"></span>
+                <button class="btn btn-outline" onclick="changeMonth(1)"><i class="fas fa-chevron-right"></i></button>
+              </div>
+              <div class="calendar-grid" id="calendar-grid"></div>
+            </div>
+            <div>
+              <h4 style="margin-bottom: 16px;">Próximos Compromissos</h4>
+              <div id="upcoming-agenda"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- METAS -->
+      <div id="page-metas" class="page" style="display:none">
+        <div class="content-card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-trophy"></i> Metas</h3>
+            <button class="btn btn-outline" onclick="openMetaModal()"><i class="fas fa-cog"></i> Configurar Meta</button>
+          </div>
+          <div id="meta-content"></div>
+        </div>
+        <div class="content-card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-chart-line"></i> Desempenho por Consultor</h3>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead><tr><th>Consultor</th><th>Meta</th><th>Realizado</th><th>%</th><th>Progresso</th></tr></thead>
+              <tbody id="consultor-meta-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- REMARKETING -->
+      <div id="page-rm" class="page" style="display:none">
+        <div class="content-card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-envelope-open-text"></i> Remarketing</h3>
+            <button class="btn btn-primary" onclick="sendMarketingEmail()"><i class="fas fa-envelope"></i> Enviar para Todos</button>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;">
+            <div class="stat-card"><div class="stat-value" id="rm-nao-prospect">0</div><div class="stat-label">Não Prospectados</div></div>
+            <div class="stat-card"><div class="stat-value" id="rm-nao-avancou">0</div><div class="stat-label">Não Avançaram</div></div>
+            <div class="stat-card"><div class="stat-value" id="rm-desistiu">0</div><div class="stat-label">Desistiram</div></div>
+          </div>
+          <div class="table-container">
+            <table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Email</th><th>Categoria</th><th>Ações</th></tr></thead><tbody id="rm-table"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- CAMPANHAS -->
+      <div id="page-campanhas" class="page" style="display:none">
+        <div class="content-card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-bullhorn"></i> Campanhas</h3>
+            <button class="btn btn-primary" onclick="openCampanhaModal()"><i class="fas fa-plus"></i> Nova Campanha</button>
+          </div>
+          <div id="campanhas-list"></div>
+        </div>
+      </div>
+
+      <!-- IMPORTAR -->
+      <div id="page-import" class="page" style="display:none">
+        <div class="content-card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-file-import"></i> Importar Leads</h3>
+            <button class="btn btn-outline" onclick="downloadTemplate()"><i class="fas fa-download"></i> Baixar Modelo</button>
+          </div>
+          <div class="dz" style="border: 2px dashed var(--gray-300); border-radius: 16px; padding: 40px; text-align: center; cursor: pointer;" onclick="document.getElementById('import-file').click()">
+            <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: var(--gray-400);"></i>
+            <p style="margin-top: 12px;">Clique ou arraste o arquivo Excel/CSV</p>
+          </div>
+          <input type="file" id="import-file" style="display:none" accept=".xlsx,.xls,.csv" onchange="handleImport(event)">
+          <div id="import-preview" style="margin-top: 20px;"></div>
+        </div>
+      </div>
+
+      <!-- E-MAILS -->
+      <div id="page-email" class="page" style="display:none">
+        <div class="content-card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-envelope"></i> Envio de E-mails</h3>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Assunto</label>
+            <input type="text" class="form-input" id="email-subject" placeholder="Digite o assunto do e-mail">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mensagem</label>
+            <textarea class="form-textarea" id="email-body" rows="6" placeholder="Digite sua mensagem... Use {empresa} e {contato} para personalizar"></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="sendBulkEmail()"><i class="fas fa-paper-plane"></i> Enviar para todos os leads</button>
+        </div>
+        <div class="content-card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-history"></i> Histórico de Envios</h3>
+          </div>
+          <div id="email-history"></div>
+        </div>
+      </div>
+
+      <!-- RELATÓRIOS -->
+      <div id="page-rel" class="page" style="display:none">
+        <div class="content-card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-chart-line"></i> Forecast - Pipeline</h3>
+            <button class="btn btn-outline" onclick="exportForecast()"><i class="fas fa-file-excel"></i> Exportar</button>
+          </div>
+          <div class="table-container">
+            <table class="data-table"><thead><tr><th>Consultor</th><th>Cliente</th><th>Segmento</th><th>Valor</th><th>Etapa</th><th>Probabilidade</th></tr></thead><tbody id="forecast-table"></tbody></table>
+          </div>
+        </div>
+        <div class="content-card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-chart-simple"></i> Produtividade</h3>
+          </div>
+          <div class="table-container">
+            <table class="data-table"><thead><tr><th>Consultor</th><th>Leads</th><th>Fechamentos</th><th>Receita</th><th>Conversão</th></tr></thead><tbody id="produtividade-table"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- USUÁRIOS -->
+      <div id="page-usuarios" class="page" style="display:none">
+        <div class="content-card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-user-shield"></i> Usuários</h3>
+            <button class="btn btn-primary" onclick="openUserModal()"><i class="fas fa-plus"></i> Novo Usuário</button>
+          </div>
+          <div class="table-container">
+            <table class="data-table"><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Ações</th></tr></thead><tbody id="users-table"></tbody></table>
+          </div>
+        </div>
       </div>
     </div>
   </div>
-
-  <!-- MARKET SHARE -->
-  <div class="tab-content" id="market-tab">
-    <div class="market-container" id="market-container" style="padding:1rem;overflow-y:auto;height:100%">
-      <div class="report-card">Carregando dados...</div>
-    </div>
-  </div>
-
-  <!-- RELATÓRIOS DE CONCORRENTES -->
-  <div class="tab-content" id="reports-tab">
-    <div class="reports-container" id="reports-container"></div>
-  </div>
-
-  <!-- CONCORRENTES -->
-  <div class="tab-content" id="competitors-tab">
-    <div class="reports-container" id="competitors-container"></div>
-  </div>
-
-  <!-- ADMIN -->
-  <div class="tab-content" id="admin-tab"><div style="padding:1rem" id="admin-panel"></div></div>
 </div>
 
-<!-- MODAL EMPRESA -->
-<div class="modal-overlay" id="modal-overlay">
-  <div class="modal">
-    <div class="modal-header"><div class="modal-title">🏢 Dados da Empresa</div><button class="modal-close" onclick="closeModal()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer">✕</button></div>
-    <div class="modal-body">
-      <div class="field-group"><div class="field-label">🏢 Nome</div><input type="text" id="modal-name" class="field-input" readonly></div>
-      <div class="field-group"><div class="field-label">📍 Endereço</div><input type="text" id="modal-address" class="field-input" readonly></div>
-      <div class="section-title">⚙️ SISTEMA E CONTADOR</div>
-      <div class="field-group"><div class="field-label">Sistema</div><input type="text" id="modal-system" class="field-input" placeholder="Ex: SAP, Omie"></div>
-      <div class="field-group"><div class="field-label">Contador</div><input type="text" id="modal-counter" class="field-input" placeholder="Nome da contabilidade"></div>
-      <div class="section-title">📊 CLASSIFICAÇÃO</div>
-      <div class="checkbox-group">
-        <label><input type="checkbox" id="check-customer"> ✅ Cliente</label>
-        <label><input type="checkbox" id="check-exclient"> ⚠️ Ex-Cliente</label>
-        <label><input type="checkbox" id="check-competitor"> 🏆 Concorrente</label>
-      </div>
-      <div id="competitor-field" style="display:none">
-        <div class="field-group"><div class="field-label">Nome do Concorrente</div><input type="text" id="modal-competitor-name" class="field-input" placeholder="Ex: Empresa XYZ"></div>
-      </div>
-      <div class="checkbox-group">
-        <label><input type="checkbox" id="check-visited"> 📍 Já foi visitada</label>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-sm" onclick="closeModal()">Cancelar</button>
-      <button class="btn-sm" onclick="saveCompany()" style="background:#22c55e;color:#fff">💾 Salvar</button>
-    </div>
-  </div>
-</div>
+<!-- MODALS -->
+<div id="modal-lead" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Lead</h3><button onclick="closeModal('modal-lead')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label class="form-label">Empresa *</label><input class="form-input" id="lead-empresa"></div><div class="form-group"><label class="form-label">Contato</label><input class="form-input" id="lead-contato"></div><div class="form-group"><label class="form-label">E-mail</label><input class="form-input" id="lead-email"></div><div class="form-group"><label class="form-label">Telefone</label><input class="form-input" id="lead-telefone"></div><div class="form-group"><label class="form-label">Cidade/UF</label><div style="display:grid;grid-template-columns:2fr 1fr;gap:10px"><input class="form-input" id="lead-cidade" placeholder="Cidade"><input class="form-input" id="lead-uf" placeholder="UF"></div></div><div class="form-group"><label class="form-label">Segmento/CNAE</label><input class="form-input" id="lead-segmento"></div><div class="form-group"><label class="form-label">Responsável</label><select class="form-select" id="lead-responsavel"></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-lead')">Cancelar</button><button class="btn btn-primary" onclick="saveLead()">Salvar</button></div></div></div>
 
-<div class="notif" id="notif"></div>
+<div id="modal-agenda" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Agendar</h3><button onclick="closeModal('modal-agenda')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label class="form-label">Lead</label><select class="form-select" id="agenda-lead"></select></div><div class="form-group"><label class="form-label">Data</label><input class="form-input" type="date" id="agenda-data"></div><div class="form-group"><label class="form-label">Hora</label><input class="form-input" type="time" id="agenda-hora"></div><div class="form-group"><label class="form-label">Observações</label><textarea class="form-textarea" id="agenda-obs"></textarea></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-agenda')">Cancelar</button><button class="btn btn-primary" onclick="saveAgenda()">Salvar</button></div></div></div>
+
+<div id="modal-venda" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Registrar Venda</h3><button onclick="closeModal('modal-venda')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label class="form-label">Lead</label><select class="form-select" id="venda-lead"></select></div><div class="form-group"><label class="form-label">Implantação (R$)</label><input class="form-input" type="number" id="venda-implantacao"></div><div class="form-group"><label class="form-label">Mensalidade (R$)</label><input class="form-input" type="number" id="venda-mensalidade"></div><div class="form-group"><label class="form-label">Produto</label><select class="form-select" id="venda-produto"><option>SCE</option><option>Easyren</option></select></div><div class="form-group"><label class="form-label">Data</label><input class="form-input" type="date" id="venda-data"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-venda')">Cancelar</button><button class="btn btn-primary" onclick="saveVenda()">Confirmar</button></div></div></div>
+
+<div id="modal-meta" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta Global</h3><button onclick="closeModal('modal-meta')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label class="form-label">Meta Implantação (R$)</label><input class="form-input" type="number" id="meta-impl"></div><div class="form-group"><label class="form-label">Meta Mensalidade (R$)</label><input class="form-input" type="number" id="meta-mens"></div><div class="form-group"><label class="form-label">Período</label><select class="form-select" id="meta-periodo"><option>Mensal</option><option>Trimestral</option><option>Anual</option></select></div><div class="form-group"><label class="form-label">Distribuir entre consultores</label><select class="form-select" id="meta-distribuir"><option value="sim">Sim</option><option value="nao">Não</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta')">Cancelar</button><button class="btn btn-primary" onclick="saveMeta()">Salvar</button></div></div></div>
+
+<div id="modal-campanha" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Campanha</h3><button onclick="closeModal('modal-campanha')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label class="form-label">Nome</label><input class="form-input" id="camp-nome"></div><div class="form-group"><label class="form-label">Tipo</label><select class="form-select" id="camp-tipo"><option>Feira/Exposição</option><option>Campanha Vendas</option><option>Evento Online</option></select></div><div class="form-group"><label class="form-label">URL Landing Page</label><input class="form-input" id="camp-lp" placeholder="https://..."></div><div class="form-group"><label class="form-label">Campos do Formulário</label><input class="form-input" id="camp-campos" value="nome,email,telefone,empresa"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-campanha')">Cancelar</button><button class="btn btn-primary" onclick="saveCampanha()">Salvar</button></div></div></div>
+
+<div id="modal-user" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Usuário</h3><button onclick="closeModal('modal-user')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label class="form-label">Nome</label><input class="form-input" id="user-nome"></div><div class="form-group"><label class="form-label">Login</label><input class="form-input" id="user-login"></div><div class="form-group"><label class="form-label">Senha</label><input class="form-input" type="password" id="user-senha"></div><div class="form-group"><label class="form-label">Perfil</label><select class="form-select" id="user-perfil"><option>Diretor</option><option>Gerente</option><option>Consultor</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-user')">Cancelar</button><button class="btn btn-primary" onclick="saveUser()">Salvar</button></div></div></div>
+
+<div class="toast-container" id="toast-container"></div>
 
 <script>
-// ========== CONFIGURAÇÃO ==========
-const firebaseConfig = {
-  apiKey: "AIzaSyC8GsM4lOCEq54cvbyYCZc0lcmqCQH96F4",
-  authDomain: "marketmap-8fa2c.firebaseapp.com",
-  projectId: "marketmap-8fa2c",
-  storageBucket: "marketmap-8fa2c.appspot.com",
-  messagingSenderId: "527088854237",
-  appId: "1:527088854237:web:abc123def456"
+// ==================== CONFIGURAÇÃO ====================
+// EmailJS - Configure com suas credenciais
+const EMAILJS_CONFIG = {
+  publicKey: "jqHDy8RFs0P6mAV6B",
+  serviceId: "service_apsgvy9",
+  templateId: "template_4x84sev"
 };
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
+// Inicializar EmailJS
+emailjs.init(EMAILJS_CONFIG.publicKey);
 
-// ========== VARIÁVEIS ==========
-let map, geocoder, markers = [], companiesList = [], currentPlace = null;
-let currentUser = null, currentUserRole = 'consultor';
-let placesService = null;
-let currentEditId = null;
+// ==================== DADOS ====================
+let currentUser = null;
+let charts = {};
 
-const brazilStates = {
-  'SP':'São Paulo','RJ':'Rio de Janeiro','MG':'Minas Gerais','RS':'Rio Grande do Sul','PR':'Paraná','SC':'Santa Catarina',
-  'BA':'Bahia','PE':'Pernambuco','CE':'Ceará','DF':'Distrito Federal','GO':'Goiás','ES':'Espírito Santo','PA':'Pará','AM':'Amazonas',
-  'MA':'Maranhão','PB':'Paraíba','RN':'Rio Grande do Norte','AL':'Alagoas','SE':'Sergipe','PI':'Piauí','TO':'Tocantins',
-  'RO':'Rondônia','AC':'Acre','AP':'Amapá','RR':'Roraima','MT':'Mato Grosso','MS':'Mato Grosso do Sul'
+let S = {
+  leads: [],
+  vendas: [],
+  agenda: [],
+  rm: [],
+  metaG: { impl: 50000, mens: 10000, periodo: 'Mensal', distribuir: 'sim' },
+  usuarios: [
+    { id: 'u1', nome: 'Administrador', login: 'admin', senha: '1234', role: 'Diretor' },
+    { id: 'u2', nome: 'João Silva', login: 'joao', senha: '1234', role: 'Consultor' },
+    { id: 'u3', nome: 'Maria Santos', login: 'maria', senha: '1234', role: 'Consultor' }
+  ],
+  campanhas: [],
+  emailHist: []
 };
 
-function showNotif(msg, type) {
-  const n = document.getElementById('notif');
-  n.textContent = msg;
-  n.className = `notif show ${type}`;
-  setTimeout(() => n.classList.remove('show'), 3000);
+let calDate = new Date();
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
+function showToast(msg, type = 'success') {
+  let container = document.getElementById('toast-container');
+  let toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> ${msg}`;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
 }
 
-function extractLocationDetails(address) {
-  if (!address) return { state: '', city: '', neighborhood: '', street: '' };
-  let state = '', city = '', neighborhood = '', street = '';
-  
-  const stateMatch = address.match(/([A-Z]{2})(?=\s|$|,)/);
-  if (stateMatch) state = stateMatch[1];
-  
-  const cityMatch = address.match(/([A-Za-zÀ-ÖØ-öø-ÿ\s]+?)\s*-\s*[A-Z]{2}/);
-  if (cityMatch) city = cityMatch[1].trim();
-  else {
-    const parts = address.split(',');
-    if (parts.length >= 2) {
-      let possibleCity = parts[0].trim();
-      possibleCity = possibleCity.replace(/^\d+/, '').replace(/Rua|Av|Avenida|Travessa|Alameda|Rodovia/i, '').trim();
-      if (possibleCity.length > 2 && possibleCity.length < 40) city = possibleCity;
-    }
+function saveData() { localStorage.setItem('prospectflow_data', JSON.stringify(S)); }
+function loadData() {
+  let d = localStorage.getItem('prospectflow_data');
+  if (d) {
+    let p = JSON.parse(d);
+    S.leads = p.leads || [];
+    S.vendas = p.vendas || [];
+    S.agenda = p.agenda || [];
+    S.rm = p.rm || [];
+    S.metaG = p.metaG || { impl: 50000, mens: 10000, periodo: 'Mensal', distribuir: 'sim' };
+    S.usuarios = p.usuarios || S.usuarios;
+    S.campanhas = p.campanhas || [];
+    S.emailHist = p.emailHist || [];
   }
-  
-  street = address.split(',')[0].trim().replace(/^\d+/, '').trim();
-  const neighborhoodMatch = address.match(/(?:Bairro|Vila|Jardim|Parque|Centro)\s+([A-Za-zÀ-ÖØ-öø-ÿ\s]+)/i);
-  if (neighborhoodMatch) neighborhood = neighborhoodMatch[1].trim();
-  
-  return { state, city, neighborhood, street };
 }
 
-// ========== LOGIN ==========
-async function doLogin() {
-  const email = document.getElementById('login-email').value.trim();
-  const pass = document.getElementById('login-pass').value.trim();
-  const errDiv = document.getElementById('login-err');
-  
-  if (!email || !pass) {
-    errDiv.innerHTML = 'Preencha e-mail e senha';
-    errDiv.style.display = 'block';
+// ==================== AUTH ====================
+function doLogin() {
+  let login = document.getElementById('auth-user').value.trim();
+  let senha = document.getElementById('auth-pass').value.trim();
+  let user = S.usuarios.find(u => u.login === login && u.senha === senha);
+  if (!user) {
+    document.getElementById('auth-error').innerHTML = 'Usuário ou senha inválidos!';
+    document.getElementById('auth-error').style.display = 'block';
     return;
   }
-  
-  try {
-    await auth.signInWithEmailAndPassword(email, pass);
-    const userDoc = await db.collection('users').doc(auth.currentUser.uid).get();
-    currentUserRole = userDoc.exists ? userDoc.data().role || 'consultor' : 'consultor';
-    document.getElementById('role-badge').textContent = currentUserRole.toUpperCase();
-    
-    if (currentUserRole === 'diretor') {
-      document.getElementById('admin-tab-btn').style.display = 'block';
-      loadAdminPanel();
-    }
-    
-    await loadCompanies();
-    loadGoogleMaps();
-  } catch (error) {
-    errDiv.innerHTML = 'Erro: ' + error.message;
-    errDiv.style.display = 'block';
-  }
+  currentUser = user;
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app-main').style.display = 'block';
+  document.getElementById('user-name').innerText = user.nome;
+  document.getElementById('user-avatar').innerText = user.nome.charAt(0).toUpperCase();
+  renderAll();
+  showToast(`Bem-vindo, ${user.nome}!`);
 }
 
-async function loadCompanies() {
-  const snapshot = await db.collection('companies').get();
-  companiesList = [];
-  snapshot.forEach(doc => companiesList.push({ id: doc.id, ...doc.data() }));
-  console.log('Empresas carregadas:', companiesList.length);
+function doLogout() {
+  currentUser = null;
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('app-main').style.display = 'none';
 }
 
-async function saveCompanyToFirestore(data) {
-  if (currentEditId) {
-    await db.collection('companies').doc(currentEditId).update(data);
-    showNotif('✅ Atualizado!', 'success');
-  } else {
-    const newId = Date.now().toString();
-    data.id = newId;
-    await db.collection('companies').doc(newId).set(data);
-    showNotif('✅ Salvo!', 'success');
-  }
-  await loadCompanies();
-  loadMarkers();
-  updateMarketShare();
-  updateReports();
-  updateCompetitorsList();
-  closeModal();
+function goToPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+  document.getElementById(`page-${page}`).style.display = 'block';
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelector(`.nav-item[data-page="${page}"]`).classList.add('active');
+  
+  let titles = { dash: 'Dashboard', leads: 'Leads', pipe: 'Pipeline', agenda: 'Agenda', metas: 'Metas', rm: 'Remarketing', campanhas: 'Campanhas', import: 'Importar', email: 'E-mails', rel: 'Relatórios', usuarios: 'Usuários' };
+  document.getElementById('page-title').innerText = titles[page];
+  
+  if (page === 'dash') renderDashboard();
+  if (page === 'leads') renderLeads();
+  if (page === 'pipe') renderPipeline();
+  if (page === 'agenda') { renderAgenda(); renderCalendar(); }
+  if (page === 'metas') renderMetas();
+  if (page === 'rm') renderRM();
+  if (page === 'campanhas') renderCampanhas();
+  if (page === 'rel') renderRelatorios();
+  if (page === 'usuarios') renderUsuarios();
+  if (page === 'email') renderEmailHistory();
 }
 
-function loadGoogleMaps() {
-  let key = localStorage.getItem('mm_gkey');
-  if (!key) {
-    key = prompt('🔑 Chave da Google Maps API:');
-    if (key && key.startsWith('AIza')) localStorage.setItem('mm_gkey', key);
-    else return;
-  }
-  const script = document.createElement('script');
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places,geometry&callback=initMap`;
-  document.head.appendChild(script);
+// ==================== LEADS ====================
+function renderLeads() {
+  let leads = currentUser.role === 'Consultor' ? S.leads.filter(l => l.responsavel === currentUser.nome) : S.leads;
+  let tb = document.getElementById('leads-table');
+  if (!tb) return;
+  tb.innerHTML = leads.map(l => `
+    <tr>
+      <td><strong>${l.empresa}</strong><br><small style="color:#666">${l.contato || ''}</small></td>
+      <td>${l.segmento ? `<span class="tag tag-purple">${l.segmento}</span>` : '—'}</td>
+      <td>${l.produto ? `<span class="tag tag-info">${l.produto}</span>` : '—'}</td>
+      <td>${getStatusTag(l.status)}</td>
+      <td>${l.pipeline ? `<span class="tag tag-warning">${l.pipeline}</span>` : '—'}</td>
+      <td>${l.responsavel || '—'}</td>
+      <td>
+        <button class="btn btn-outline" style="padding:4px 10px; margin-right:4px;" onclick="evoluirLead('${l.id}')"><i class="fas fa-arrow-right"></i></button>
+        <button class="btn btn-primary" style="padding:4px 10px; margin-right:4px;" onclick="openVendaModal('${l.id}')"><i class="fas fa-dollar-sign"></i></button>
+        <button class="btn" style="padding:4px 10px; background:#fee2e2; color:#ef4444;" onclick="descartarLead('${l.id}')"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="7" style="text-align:center">Nenhum lead cadastrado</td></tr>';
 }
 
-function initMap() {
-  document.getElementById('screen-login').classList.remove('active');
-  document.getElementById('screen-app').classList.add('active');
-  map = new google.maps.Map(document.getElementById('google-map'), { zoom: 12, center: { lat: -23.5505, lng: -46.6333 } });
-  geocoder = new google.maps.Geocoder();
-  placesService = new google.maps.places.PlacesService(map);
-  loadMarkers();
-  updateMarketShare();
-  updateReports();
-  updateCompetitorsList();
-  setupEventListeners();
-  showNotif('✅ Mapa carregado!', 'success');
+function getStatusTag(s) {
+  let map = { Oportunidade: 'tag-info', Prospect: 'tag-purple', Captado: 'tag-success', Descartado: 'tag-danger' };
+  return `<span class="tag ${map[s] || 'tag-info'}">${s || 'Oportunidade'}</span>`;
 }
 
-function loadMarkers() {
-  if (!map) return;
-  markers.forEach(m => m.setMap(null));
-  markers = [];
-  companiesList.forEach(c => {
-    if (c.lat && c.lng) {
-      let color = '#6b7280';
-      if (c.isCustomer) color = '#22c55e';
-      else if (c.isExClient) color = '#f59e0b';
-      else if (c.isCompetitor) color = '#ef4444';
-      else if (c.isVisited) color = '#a855f7';
-      
-      const m = new google.maps.Marker({
-        position: { lat: c.lat, lng: c.lng },
-        map, title: c.name,
-        icon: { path: google.maps.SymbolPath.CIRCLE, fillColor: color, fillOpacity: 1, strokeWeight: 0, scale: 8 }
-      });
-      m.addListener('click', () => openCompanyModal(c));
-      markers.push(m);
-    }
-  });
+function openLeadModal() {
+  document.getElementById('lead-empresa').value = '';
+  document.getElementById('lead-contato').value = '';
+  document.getElementById('lead-email').value = '';
+  document.getElementById('lead-telefone').value = '';
+  document.getElementById('lead-cidade').value = '';
+  document.getElementById('lead-uf').value = '';
+  document.getElementById('lead-segmento').value = '';
+  let respSelect = document.getElementById('lead-responsavel');
+  respSelect.innerHTML = '<option value="">Selecione</option>' + S.usuarios.filter(u => u.role === 'Consultor' || u.role === 'Gerente').map(u => `<option value="${u.nome}">${u.nome}</option>`).join('');
+  openModal('modal-lead');
 }
 
-async function searchBusinesses() {
-  const searchType = document.querySelector('input[name="searchType"]:checked').value;
-  let query = searchType === 'location' ? document.getElementById('search-input').value.trim() : document.getElementById('company-name-input').value.trim();
-  if (!query) { showNotif('Digite algo', 'error'); return; }
-  
-  markers.forEach(m => m.setMap(null));
-  markers = [];
-  
-  if (searchType === 'company') {
-    placesService.textSearch({ query, fields: ['name', 'formatted_address', 'geometry', 'place_id'] }, (res, status) => {
-      if (status === 'OK' && res.length) {
-        displayResults(res);
-        if (res[0].geometry) map.setCenter(res[0].geometry.location);
-        map.setZoom(16);
-      } else showNotif('Nenhuma empresa encontrada', 'error');
-    });
-  } else {
-    geocoder.geocode({ address: query + ', Brasil' }, (res, status) => {
-      if (status === 'OK' && res[0]) {
-        map.setCenter(res[0].geometry.location);
-        map.setZoom(14);
-        placesService.nearbySearch({ location: res[0].geometry.location, radius: 2000, type: 'establishment' }, (res2, status2) => {
-          if (status2 === 'OK' && res2.length) displayResults(res2);
-          else showNotif('Nenhuma empresa encontrada', 'error');
-        });
-      } else showNotif('Local não encontrado', 'error');
-    });
-  }
-}
-
-function displayResults(results) {
-  const listDiv = document.getElementById('company-list');
-  listDiv.innerHTML = '';
-  results.forEach(place => {
-    const existing = companiesList.find(c => c.placeId === place.place_id);
-    let statusTag = existing ? (existing.isCustomer ? 'Cliente' : (existing.isCompetitor ? 'Concorrente' : (existing.isExClient ? 'Ex-Cliente' : 'Visitado'))) : 'Não cadastrada';
-    const card = document.createElement('div');
-    card.className = `company-card ${existing?.isCustomer ? 'client' : (existing?.isCompetitor ? 'competitor' : (existing?.isExClient ? 'exclient' : ''))}`;
-    card.innerHTML = `<div class="company-name">${place.name}</div><div class="company-addr">${place.formatted_address || place.vicinity}</div><div class="company-tags"><span class="tag">${statusTag}</span>${existing?.system ? `<span class="tag tag-system">${existing.system}</span>` : ''}</div>`;
-    card.onclick = () => openModalFromPlace(place);
-    listDiv.appendChild(card);
-    if (place.geometry) {
-      let color = existing ? (existing.isCustomer ? '#22c55e' : (existing.isCompetitor ? '#ef4444' : (existing.isExClient ? '#f59e0b' : '#a855f7'))) : '#6b7280';
-      const m = new google.maps.Marker({ position: place.geometry.location, map, title: place.name, icon: { path: google.maps.SymbolPath.CIRCLE, fillColor: color, fillOpacity: 1, strokeWeight: 0, scale: 8 } });
-      m.addListener('click', () => openModalFromPlace(place));
-      markers.push(m);
-    }
-  });
-}
-
-// ========== MARKET SHARE ==========
-function updateMarketShare() {
-  const container = document.getElementById('market-container');
-  if (!container) return;
-  
-  const clients = companiesList.filter(c => c.isCustomer === true);
-  const competitors = companiesList.filter(c => c.isCompetitor === true);
-  const total = clients.length + competitors.length;
-  const ourShare = total > 0 ? ((clients.length / total) * 100).toFixed(1) : 0;
-  const theirShare = total > 0 ? ((competitors.length / total) * 100).toFixed(1) : 0;
-  
-  container.innerHTML = `
-    <div class="stats-grid">
-      <div class="stat-card"><div class="stat-number" style="color:#22c55e">${clients.length}</div><div>✅ Clientes</div></div>
-      <div class="stat-card"><div class="stat-number" style="color:#ef4444">${competitors.length}</div><div>⚠️ Concorrentes</div></div>
-      <div class="stat-card"><div class="stat-number">${ourShare}%</div><div>Market Share</div><div class="progress-bar"><div class="progress-fill" style="width:${ourShare}%"></div></div></div>
-    </div>
-    <div class="report-card">
-      <div class="report-title">📊 Nós vs Concorrentes</div>
-      <div class="comparison-bar" style="display:flex;height:40px;border-radius:8px;overflow:hidden">
-        <div style="background:#22c55e;width:${ourShare}%;display:flex;align-items:center;justify-content:flex-end;padding-right:10px;font-weight:bold">${ourShare}%</div>
-        <div style="background:#ef4444;width:${theirShare}%;display:flex;align-items:center;justify-content:flex-start;padding-left:10px;font-weight:bold">${theirShare}%</div>
-      </div>
-    </div>
-  `;
-}
-
-// ========== RELATÓRIOS DE CONCORRENTES ==========
-function updateReports() {
-  const container = document.getElementById('reports-container');
-  if (!container) return;
-  
-  // Coletar opções únicas para os filtros
-  const competitorsList = companiesList.filter(c => c.isCompetitor === true);
-  const uniqueCompetitorNames = [...new Set(competitorsList.map(c => c.competitorName).filter(n => n))];
-  const uniqueStates = [...new Set(competitorsList.map(c => extractLocationDetails(c.address).state).filter(s => s))];
-  const uniqueCities = [...new Set(competitorsList.map(c => extractLocationDetails(c.address).city).filter(c => c))];
-  const uniqueNeighborhoods = [...new Set(competitorsList.map(c => extractLocationDetails(c.address).neighborhood).filter(n => n))];
-  
-  const html = `
-    <div class="filter-bar">
-      <div class="filter-group">
-        <label>🏆 CONCORRENTE</label>
-        <select id="filter-competitor-name" class="filter-select" onchange="applyReportsFilter()">
-          <option value="">Todos os concorrentes</option>
-          ${uniqueCompetitorNames.map(n => `<option value="${n}">${n}</option>`).join('')}
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>📍 ESTADO</label>
-        <select id="filter-state" class="filter-select" onchange="updateCityFilter(); applyReportsFilter()">
-          <option value="">Todos os estados</option>
-          ${uniqueStates.sort().map(s => `<option value="${s}">${brazilStates[s] || s}</option>`).join('')}
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>🏙️ CIDADE</label>
-        <select id="filter-city" class="filter-select" onchange="applyReportsFilter()">
-          <option value="">Todas as cidades</option>
-          ${uniqueCities.sort().map(c => `<option value="${c}">${c}</option>`).join('')}
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>🏘️ BAIRRO</label>
-        <input type="text" id="filter-neighborhood" class="filter-input" placeholder="Digite o bairro" onkeyup="applyReportsFilter()">
-      </div>
-      <button class="btn-sm" onclick="resetReportsFilters()" style="background:#f59e0b;color:#fff">Limpar Filtros</button>
-    </div>
-    <div id="reports-results"></div>
-  `;
-  
-  container.innerHTML = html;
-  
-  // Funções globais para os filtros
-  window.updateCityFilter = function() {
-    const selectedState = document.getElementById('filter-state')?.value || '';
-    const competitors = companiesList.filter(c => c.isCompetitor === true);
-    const citiesInState = [...new Set(competitors.filter(c => extractLocationDetails(c.address).state === selectedState).map(c => extractLocationDetails(c.address).city))];
-    const citySelect = document.getElementById('filter-city');
-    if (citySelect) {
-      citySelect.innerHTML = `<option value="">Todas as cidades</option>${citiesInState.sort().map(c => `<option value="${c}">${c}</option>`).join('')}`;
-    }
-    applyReportsFilter();
+function saveLead() {
+  let lead = {
+    id: uid(),
+    empresa: document.getElementById('lead-empresa').value.trim(),
+    contato: document.getElementById('lead-contato').value.trim(),
+    email: document.getElementById('lead-email').value.trim(),
+    telefone: document.getElementById('lead-telefone').value.trim(),
+    cidade: document.getElementById('lead-cidade').value.trim(),
+    uf: document.getElementById('lead-uf').value.trim(),
+    segmento: document.getElementById('lead-segmento').value.trim(),
+    responsavel: document.getElementById('lead-responsavel').value,
+    status: 'Oportunidade',
+    pipeline: '',
+    produto: '',
+    implantacao: 0,
+    mensalidade: 0,
+    createdAt: new Date().toISOString()
   };
-  
-  window.applyReportsFilter = function() { generateCompetitorsReport(); };
-  window.resetReportsFilters = function() {
-    document.getElementById('filter-competitor-name').value = '';
-    document.getElementById('filter-state').value = '';
-    document.getElementById('filter-city').value = '';
-    document.getElementById('filter-neighborhood').value = '';
-    applyReportsFilter();
-  };
-  
-  generateCompetitorsReport();
+  if (!lead.empresa) { showToast('Informe a empresa!', 'error'); return; }
+  S.leads.push(lead);
+  saveData();
+  closeModal('modal-lead');
+  renderLeads();
+  renderDashboard();
+  showToast('Lead criado com sucesso!');
 }
 
-function generateCompetitorsReport() {
-  const resultsDiv = document.getElementById('reports-results');
-  if (!resultsDiv) return;
-  
-  const competitorNameFilter = document.getElementById('filter-competitor-name')?.value || '';
-  const stateFilter = document.getElementById('filter-state')?.value || '';
-  const cityFilter = document.getElementById('filter-city')?.value || '';
-  const neighborhoodFilter = document.getElementById('filter-neighborhood')?.value.toLowerCase() || '';
-  
-  let filtered = companiesList.filter(c => c.isCompetitor === true);
-  
-  if (competitorNameFilter) {
-    filtered = filtered.filter(c => c.competitorName === competitorNameFilter);
-  }
-  if (stateFilter) {
-    filtered = filtered.filter(c => extractLocationDetails(c.address).state === stateFilter);
-  }
-  if (cityFilter) {
-    filtered = filtered.filter(c => extractLocationDetails(c.address).city === cityFilter);
-  }
-  if (neighborhoodFilter) {
-    filtered = filtered.filter(c => extractLocationDetails(c.address).neighborhood.toLowerCase().includes(neighborhoodFilter));
-  }
-  
-  // Agrupar por concorrente para estatísticas
-  const competitorGroups = {};
-  filtered.forEach(c => {
-    const name = c.competitorName || c.name;
-    if (!competitorGroups[name]) competitorGroups[name] = [];
-    competitorGroups[name].push(c);
-  });
-  
-  let html = `
-    <div class="stats-grid">
-      <div class="stat-card"><div class="stat-number" style="color:#ef4444">${filtered.length}</div><div>Total de Concorrentes</div></div>
-      <div class="stat-card"><div class="stat-number" style="color:#60a5fa">${Object.keys(competitorGroups).length}</div><div>Empresas Concorrentes</div></div>
-    </div>
-  `;
-  
-  if (filtered.length === 0) {
-    html += `<div class="report-card"><div class="empty-state">⚠️ Nenhum concorrente encontrado com os filtros selecionados.</div></div>`;
-    resultsDiv.innerHTML = html;
+function evoluirLead(id) {
+  let l = S.leads.find(l => l.id === id);
+  if (!l) return;
+  if (l.status === 'Oportunidade') {
+    l.status = 'Prospect';
+    l.pipeline = 'Agendamento';
+    showToast('Lead → Prospect - Agende uma apresentação');
+    openAgendaModal(l.id);
+  } else if (l.pipeline === 'Agendamento') {
+    l.pipeline = 'Apresentação';
+    showToast('Apresentação confirmada!');
+  } else if (l.pipeline === 'Apresentação') {
+    l.pipeline = 'Negociação';
+    showToast('Lead em negociação');
+  } else if (l.pipeline === 'Negociação') {
+    openVendaModal(id);
     return;
   }
-  
-  // Lista de concorrentes agrupados
-  for (const [compName, companies] of Object.entries(competitorGroups).sort((a,b) => b[1].length - a[1].length)) {
-    const locations = [...new Set(companies.map(c => {
-      const { city, state } = extractLocationDetails(c.address);
-      return city && state ? `${city}/${state}` : (city || state || 'Local não identificado');
-    }))];
-    
-    html += `
-      <div class="report-card">
-        <div class="report-title">
-          <span>🏆 ${compName}</span>
-          <span class="badge badge-competitor">${companies.length} ocorrência(s)</span>
+  saveData();
+  renderLeads();
+  renderPipeline();
+  renderDashboard();
+}
+
+function descartarLead(id) {
+  let l = S.leads.find(l => l.id === id);
+  if (!l) return;
+  let cat = l.status === 'Oportunidade' ? 'Não Prospectado' : (l.pipeline === 'Agendamento' || l.pipeline === 'Apresentação' ? 'Não Avançou' : 'Desistiu');
+  S.rm.push({
+    id: uid(), empresa: l.empresa, contato: l.contato, email: l.email,
+    categoria: cat, motivo: 'Descartado em ' + (l.pipeline || l.status),
+    data: new Date().toISOString().split('T')[0], leadId: l.id
+  });
+  l.status = 'Descartado';
+  l.pipeline = 'Descartado';
+  saveData();
+  renderLeads();
+  renderRM();
+  renderDashboard();
+  showToast('Lead descartado e enviado ao Remarketing');
+}
+
+function filterLeads() {
+  renderLeads();
+}
+
+// ==================== PIPELINE ====================
+function renderPipeline() {
+  let leads = S.leads.filter(l => l.status === 'Prospect' || l.status === 'Captado');
+  if (currentUser.role === 'Consultor') leads = leads.filter(l => l.responsavel === currentUser.nome);
+  let stages = ['Agendamento', 'Apresentação', 'Negociação', 'Fechamento'];
+  let board = document.getElementById('pipeline-board');
+  board.innerHTML = stages.map(s => `
+    <div class="pipeline-column">
+      <div class="pipeline-header">${s} <span class="tag tag-info">${leads.filter(l => l.pipeline === s).length}</span></div>
+      ${leads.filter(l => l.pipeline === s).map(l => `
+        <div class="pipeline-card" onclick="openVendaModal('${l.id}')">
+          <div style="font-weight:600">${l.empresa}</div>
+          <div style="font-size:12px; color:#666">${l.responsavel || ''}</div>
         </div>
-        <div style="margin-bottom:12px">
-          <span class="badge badge-location">📍 ${locations.slice(0,3).join(', ')}${locations.length > 3 ? ` e +${locations.length-3}` : ''}</span>
+      `).join('') || '<div style="text-align:center; padding:20px; color:#999">Vazio</div>'}
+    </div>
+  `).join('');
+}
+
+// ==================== AGENDA ====================
+function renderAgenda() {
+  let agenda = currentUser.role === 'Consultor' ? S.agenda.filter(a => a.responsavel === currentUser.nome) : S.agenda;
+  let upcoming = agenda.filter(a => a.data >= new Date().toISOString().split('T')[0]).slice(0, 5);
+  document.getElementById('upcoming-agenda').innerHTML = upcoming.map(a => `
+    <div style="padding:12px; border-bottom:1px solid #e2e8f0">
+      <div><strong>${a.empresa}</strong></div>
+      <div style="font-size:12px; color:#666">📅 ${a.data} às ${a.hora}</div>
+    </div>
+  `).join('') || '<div style="text-align:center; padding:20px">Sem agendamentos</div>';
+}
+
+function renderCalendar() {
+  let y = calDate.getFullYear(), m = calDate.getMonth();
+  let first = new Date(y, m, 1).getDay();
+  let days = new Date(y, m + 1, 0).getDate();
+  let agenda = currentUser.role === 'Consultor' ? S.agenda.filter(a => a.responsavel === currentUser.nome) : S.agenda;
+  let html = '';
+  for (let i = 0; i < first; i++) html += '<div></div>';
+  for (let d = 1; d <= days; d++) {
+    let ds = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    let evs = agenda.filter(a => a.data === ds);
+    html += `
+      <div class="calendar-day">
+        <div class="calendar-day-number">${d}</div>
+        ${evs.map(e => `<div class="calendar-event">${e.empresa}</div>`).join('')}
+      </div>
+    `;
+  }
+  document.getElementById('calendar-grid').innerHTML = html;
+  document.getElementById('calendar-month').innerText = calDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+}
+
+function changeMonth(delta) {
+  calDate = new Date(calDate.getFullYear(), calDate.getMonth() + delta, 1);
+  renderCalendar();
+}
+
+function openAgendaModal(leadId) {
+  let leads = S.leads.filter(l => l.status === 'Prospect' || l.status === 'Oportunidade');
+  let sel = document.getElementById('agenda-lead');
+  sel.innerHTML = leads.map(l => `<option value="${l.id}" ${l.id === leadId ? 'selected' : ''}>${l.empresa}</option>`).join('');
+  document.getElementById('agenda-data').value = new Date().toISOString().split('T')[0];
+  document.getElementById('agenda-hora').value = '10:00';
+  openModal('modal-agenda');
+}
+
+function saveAgenda() {
+  let leadId = document.getElementById('agenda-lead').value;
+  let lead = S.leads.find(l => l.id === leadId);
+  if (!lead) { showToast('Lead não encontrado', 'error'); return; }
+  let agenda = {
+    id: uid(), leadId: lead.id, empresa: lead.empresa,
+    data: document.getElementById('agenda-data').value,
+    hora: document.getElementById('agenda-hora').value,
+    obs: document.getElementById('agenda-obs').value,
+    responsavel: lead.responsavel || currentUser.nome
+  };
+  S.agenda.push(agenda);
+  if (lead.status === 'Oportunidade') {
+    lead.status = 'Prospect';
+    lead.pipeline = 'Agendamento';
+  }
+  saveData();
+  closeModal('modal-agenda');
+  renderAgenda();
+  renderCalendar();
+  renderLeads();
+  showToast('Agendamento salvo!');
+}
+
+// ==================== VENDAS ====================
+function openVendaModal(leadId) {
+  let l = S.leads.find(l => l.id === leadId);
+  if (!l) return;
+  let sel = document.getElementById('venda-lead');
+  sel.innerHTML = `<option value="${l.id}">${l.empresa}</option>`;
+  document.getElementById('venda-implantacao').value = l.implantacao || 0;
+  document.getElementById('venda-mensalidade').value = l.mensalidade || 0;
+  document.getElementById('venda-data').value = new Date().toISOString().split('T')[0];
+  openModal('modal-venda');
+}
+
+function saveVenda() {
+  let leadId = document.getElementById('venda-lead').value;
+  let lead = S.leads.find(l => l.id === leadId);
+  if (!lead) return;
+  let venda = {
+    id: uid(), leadId: lead.id, empresa: lead.empresa,
+    consultor: lead.responsavel || currentUser.nome,
+    produto: document.getElementById('venda-produto').value,
+    implantacao: parseFloat(document.getElementById('venda-implantacao').value) || 0,
+    mensalidade: parseFloat(document.getElementById('venda-mensalidade').value) || 0,
+    data: document.getElementById('venda-data').value,
+    createdAt: new Date().toISOString()
+  };
+  lead.status = 'Captado';
+  lead.pipeline = 'Fechamento';
+  lead.produto = venda.produto;
+  lead.implantacao = venda.implantacao;
+  lead.mensalidade = venda.mensalidade;
+  S.vendas.push(venda);
+  saveData();
+  closeModal('modal-venda');
+  renderLeads();
+  renderMetas();
+  renderDashboard();
+  showToast(`Venda registrada! R$ ${(venda.implantacao + venda.mensalidade).toLocaleString('pt-BR')}`);
+}
+
+// ==================== METAS ====================
+function renderMetas() {
+  let vendas = S.vendas;
+  let realImpl = vendas.reduce((s, v) => s + v.implantacao, 0);
+  let mg = S.metaG;
+  let pct = mg.impl > 0 ? Math.min(100, Math.round(realImpl / mg.impl * 100)) : 0;
+  document.getElementById('meta-content').innerHTML = `
+    <div style="margin-bottom: 24px;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+        <span>Meta ${mg.periodo} - Implantação</span>
+        <span><strong>R$ ${realImpl.toLocaleString('pt-BR')}</strong> / R$ ${mg.impl.toLocaleString('pt-BR')}</span>
+      </div>
+      <div style="background: #e2e8f0; border-radius: 20px; overflow: hidden;">
+        <div style="width: ${pct}%; background: linear-gradient(135deg, #667eea, #764ba2); height: 12px; border-radius: 20px;"></div>
+      </div>
+      <div style="margin-top: 8px; text-align: right; font-size: 24px; font-weight: 700;">${pct}%</div>
+    </div>
+  `;
+
+  let consultores = S.usuarios.filter(u => u.role === 'Consultor' || u.role === 'Gerente').map(u => u.nome);
+  let metaPor = mg.distribuir === 'sim' && consultores.length > 0 ? mg.impl / consultores.length : 0;
+  let tb = document.getElementById('consultor-meta-table');
+  tb.innerHTML = consultores.map(c => {
+    let vendasC = vendas.filter(v => v.consultor === c);
+    let realizado = vendasC.reduce((s, v) => s + v.implantacao, 0);
+    let p = metaPor > 0 ? Math.min(100, Math.round(realizado / metaPor * 100)) : 0;
+    return `
+      <tr>
+        <td><strong>${c}</strong></td>
+        <td>R$ ${metaPor.toLocaleString('pt-BR')}</td>
+        <td>R$ ${realizado.toLocaleString('pt-BR')}</td>
+        <td><span class="tag ${p >= 100 ? 'tag-success' : p >= 50 ? 'tag-warning' : 'tag-danger'}">${p}%</span></td>
+        <td style="width: 120px;"><div style="background:#e2e8f0; border-radius:10px;"><div style="width:${p}%; background:${p >= 100 ? '#10b981' : p >= 50 ? '#f59e0b' : '#ef4444'}; height:8px; border-radius:10px;"></div></div></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function openMetaModal() {
+  document.getElementById('meta-impl').value = S.metaG.impl;
+  document.getElementById('meta-mens').value = S.metaG.mens;
+  document.getElementById('meta-periodo').value = S.metaG.periodo;
+  document.getElementById('meta-distribuir').value = S.metaG.distribuir;
+  openModal('modal-meta');
+}
+
+function saveMeta() {
+  S.metaG = {
+    impl: parseFloat(document.getElementById('meta-impl').value) || 0,
+    mens: parseFloat(document.getElementById('meta-mens').value) || 0,
+    periodo: document.getElementById('meta-periodo').value,
+    distribuir: document.getElementById('meta-distribuir').value
+  };
+  saveData();
+  closeModal('modal-meta');
+  renderMetas();
+  renderDashboard();
+  showToast('Meta salva!');
+}
+
+// ==================== REMARKETING ====================
+function renderRM() {
+  let rm = S.rm;
+  document.getElementById('rm-nao-prospect').innerText = rm.filter(r => r.categoria === 'Não Prospectado').length;
+  document.getElementById('rm-nao-avancou').innerText = rm.filter(r => r.categoria === 'Não Avançou').length;
+  document.getElementById('rm-desistiu').innerText = rm.filter(r => r.categoria === 'Desistiu').length;
+  let tb = document.getElementById('rm-table');
+  tb.innerHTML = rm.map(r => `
+    <tr>
+      <td><strong>${r.empresa}</strong></td>
+      <td>${r.contato || '—'}</td>
+      <td>${r.email || '—'}</td>
+      <td><span class="tag ${r.categoria === 'Não Prospectado' ? 'tag-info' : r.categoria === 'Não Avançou' ? 'tag-warning' : 'tag-danger'}">${r.categoria}</span></td>
+      <td><button class="btn btn-primary" style="padding:4px 12px;" onclick="sendSingleEmail('${r.id}')"><i class="fas fa-envelope"></i> Enviar</button></td>
+    </tr>
+  `).join('') || '<tr><td colspan="5" style="text-align:center">Nenhum lead em remarketing</td></tr>';
+}
+
+async function sendSingleEmail(rmId) {
+  let r = S.rm.find(r => r.id === rmId);
+  if (!r || !r.email) { showToast('Lead sem e-mail!', 'error'); return; }
+  await sendEmail(r.email, `Reativação - ${r.empresa}`, `Olá ${r.contato || r.empresa},\n\nGostaríamos de retomar o contato!\n\nAtenciosamente,\nEquipe Comercial`);
+  showToast(`E-mail enviado para ${r.empresa}`);
+}
+
+async function sendMarketingEmail() {
+  let rmComEmail = S.rm.filter(r => r.email);
+  if (rmComEmail.length === 0) { showToast('Nenhum lead com e-mail!', 'error'); return; }
+  for (let r of rmComEmail) {
+    await sendEmail(r.email, `Oportunidade para ${r.empresa}`, `Olá ${r.contato || r.empresa},\n\nTemos novidades!\n\nAtenciosamente,\nEquipe Comercial`);
+  }
+  showToast(`E-mails enviados para ${rmComEmail.length} leads!`);
+}
+
+// ==================== E-MAILS ====================
+async function sendEmail(to, subject, body) {
+  let hist = { id: uid(), to, subject, body, data: new Date().toISOString() };
+  S.emailHist.unshift(hist);
+  saveData();
+  renderEmailHistory();
+  console.log(`Email enviado para ${to}: ${subject}`);
+  return true;
+}
+
+async function sendBulkEmail() {
+  let subject = document.getElementById('email-subject').value;
+  let body = document.getElementById('email-body').value;
+  if (!subject || !body) { showToast('Preencha assunto e mensagem!', 'error'); return; }
+  let leads = S.leads.filter(l => l.email && l.status !== 'Descartado');
+  if (leads.length === 0) { showToast('Nenhum lead com e-mail!', 'error'); return; }
+  for (let l of leads) {
+    let personalized = body.replace(/{empresa}/g, l.empresa).replace(/{contato}/g, l.contato || 'Prezado(a)');
+    await sendEmail(l.email, subject, personalized);
+  }
+  showToast(`E-mails enviados para ${leads.length} leads!`);
+}
+
+function renderEmailHistory() {
+  let el = document.getElementById('email-history');
+  el.innerHTML = S.emailHist.slice(0, 20).map(h => `
+    <div style="padding: 12px; border-bottom: 1px solid #e2e8f0;">
+      <div><strong>${h.subject}</strong></div>
+      <div style="font-size: 12px; color: #666;">Para: ${h.to} - ${new Date(h.data).toLocaleString('pt-BR')}</div>
+    </div>
+  `).join('') || '<div style="text-align:center; padding:20px">Nenhum e-mail enviado</div>';
+}
+
+// ==================== CAMPANHAS ====================
+function renderCampanhas() {
+  let list = document.getElementById('campanhas-list');
+  if (S.campanhas.length === 0) {
+    list.innerHTML = '<div class="content-card" style="text-align:center">Nenhuma campanha criada</div>';
+    return;
+  }
+  list.innerHTML = S.campanhas.map(c => `
+    <div class="content-card">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h4><i class="fas fa-bullhorn"></i> ${c.nome}</h4>
+          <p style="color: #666; margin-top: 4px;">${c.tipo}</p>
         </div>
         <div>
-          ${companies.map(c => `
-            <div class="company-row" onclick='openCompanyModal(${JSON.stringify(c).replace(/'/g, "\\'")})'>
-              <div style="display:flex;flex-direction:column">
-                <span style="font-weight:500">${c.name}</span>
-                <span style="font-size:11px;color:#64748b">${c.address || 'Endereço não informado'}</span>
-              </div>
-              <div>
-                <span class="badge badge-location">${extractLocationDetails(c.address).city || 'Cidade não informada'}</span>
-              </div>
-            </div>
-          `).join('')}
+          <button class="btn btn-outline" style="margin-right: 8px;" onclick="generateQR('${c.id}')"><i class="fas fa-qrcode"></i> QR Code</button>
+          <button class="btn btn-outline" onclick="generateForm('${c.id}')"><i class="fas fa-file-alt"></i> Formulário</button>
         </div>
       </div>
-    `;
-  }
-  
-  resultsDiv.innerHTML = html;
-}
-
-// ========== LISTA DE CONCORRENTES ==========
-function updateCompetitorsList() {
-  const container = document.getElementById('competitors-container');
-  if (!container) return;
-  
-  const competitors = companiesList.filter(c => c.isCompetitor === true);
-  const competitorGroups = {};
-  competitors.forEach(c => {
-    const name = c.competitorName || c.name;
-    if (!competitorGroups[name]) competitorGroups[name] = [];
-    competitorGroups[name].push(c);
-  });
-  
-  let html = `
-    <div class="stats-grid">
-      <div class="stat-card"><div class="stat-number" style="color:#ef4444">${competitors.length}</div><div>Total de Concorrentes</div></div>
-      <div class="stat-card"><div class="stat-number" style="color:#60a5fa">${Object.keys(competitorGroups).length}</div><div>Empresas Concorrentes</div></div>
+      ${c.lp ? `<div style="margin-top: 12px;"><i class="fas fa-link"></i> <a href="${c.lp}" target="_blank">${c.lp}</a></div>` : ''}
+      <div id="qr-${c.id}" style="margin-top: 16px; text-align: center; display: none;"></div>
     </div>
-  `;
-  
-  for (const [compName, companies] of Object.entries(competitorGroups).sort((a,b) => b[1].length - a[1].length)) {
-    html += `
-      <div class="report-card">
-        <div class="report-title">🏆 ${compName}</div>
-        ${companies.map(c => `
-          <div class="company-row" onclick='openCompanyModal(${JSON.stringify(c).replace(/'/g, "\\'")})'>
-            <div><span style="font-weight:500">${c.name}</span><br><span style="font-size:11px;color:#64748b">${c.address?.substring(0, 60) || ''}</span></div>
-            <div><span class="badge badge-location">${extractLocationDetails(c.address).city || 'Local não informado'}</span></div>
-          </div>
-        `).join('')}
-      </div>
+  `).join('');
+}
+
+function openCampanhaModal() {
+  document.getElementById('camp-nome').value = '';
+  document.getElementById('camp-tipo').value = 'Feira/Exposição';
+  document.getElementById('camp-lp').value = '';
+  openModal('modal-campanha');
+}
+
+function saveCampanha() {
+  let camp = {
+    id: uid(),
+    nome: document.getElementById('camp-nome').value.trim(),
+    tipo: document.getElementById('camp-tipo').value,
+    lp: document.getElementById('camp-lp').value,
+    campos: document.getElementById('camp-campos').value,
+    createdAt: new Date().toISOString()
+  };
+  if (!camp.nome) { showToast('Informe o nome!', 'error'); return; }
+  S.campanhas.push(camp);
+  saveData();
+  closeModal('modal-campanha');
+  renderCampanhas();
+  showToast('Campanha criada!');
+}
+
+function generateQR(id) {
+  let c = S.campanhas.find(c => c.id === id);
+  if (!c || !c.lp) { showToast('Configure a URL da Landing Page!', 'error'); return; }
+  let qrDiv = document.getElementById(`qr-${id}`);
+  qrDiv.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(c.lp)}"><br><button class="btn btn-outline" onclick="this.parentElement.style.display='none'">Fechar</button>`;
+  qrDiv.style.display = 'block';
+}
+
+function generateForm(id) {
+  let c = S.campanhas.find(c => c.id === id);
+  if (!c) return;
+  let campos = c.campos.split(',');
+  let html = `<div style="background: white; padding: 24px; border-radius: 16px; max-width: 500px; margin: 0 auto;"><h3>${c.nome}</h3><form id="form-campanha">`;
+  campos.forEach(campo => {
+    html += `<div style="margin-bottom: 16px;"><label style="display:block; margin-bottom:4px;">${campo}</label><input name="${campo}" class="form-input" required></div>`;
+  });
+  html += `<button type="submit" class="btn btn-primary">Enviar</button></form><div id="form-msg"></div></div>`;
+  let win = window.open('', '_blank', 'width=500,height=600');
+  win.document.write(`
+    <html><head><title>${c.nome}</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"><style>body{font-family:Inter; background:#f5f5f5; padding:20px;} .form-input{width:100%; padding:12px; border:1px solid #ddd; border-radius:8px;}</style></head><body>${html}
+    <script>
+      document.getElementById('form-campanha').addEventListener('submit', function(e){
+        e.preventDefault();
+        let data={};
+        for(let[k,v] of new FormData(this)) data[k]=v;
+        data.campanha='${c.id}';
+        localStorage.setItem('lead_'+Date.now(), JSON.stringify(data));
+        document.getElementById('form-msg').innerHTML='<div style="background:#d1fae5; padding:12px; border-radius:8px; margin-top:16px;">✅ Cadastro realizado! Entraremos em contato.</div>';
+        this.reset();
+      });
+    <\/script>
+    </body></html>
+  `);
+}
+
+// ==================== IMPORTAR ====================
+function downloadTemplate() {
+  let ws = XLSX.utils.aoa_to_sheet([
+    ['empresa', 'contato', 'email', 'telefone', 'cidade', 'uf', 'segmento', 'responsavel'],
+    ['Exemplo SA', 'João', 'joao@email.com', '11999999999', 'São Paulo', 'SP', 'Tecnologia', '']
+  ]);
+  let wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Modelo');
+  XLSX.writeFile(wb, 'modelo_leads.xlsx');
+  showToast('Modelo baixado!');
+}
+
+function handleImport(e) {
+  let f = e.target.files[0];
+  if (!f) return;
+  let r = new FileReader();
+  r.onload = function(ev) {
+    let wb = XLSX.read(ev.target.result, { type: 'binary' });
+    let ws = wb.Sheets[wb.SheetNames[0]];
+    let rows = XLSX.utils.sheet_to_json(ws);
+    let imported = 0;
+    for (let row of rows) {
+      let empresa = row.empresa || row.Empresa;
+      if (empresa && !S.leads.find(l => l.empresa === empresa)) {
+        S.leads.push({
+          id: uid(), empresa, contato: row.contato || '', email: row.email || '',
+          telefone: row.telefone || '', cidade: row.cidade || '', uf: row.uf || '',
+          segmento: row.segmento || '', responsavel: row.responsavel || currentUser.nome,
+          status: 'Oportunidade', pipeline: '', produto: '', implantacao: 0, mensalidade: 0,
+          createdAt: new Date().toISOString()
+        });
+        imported++;
+      }
+    }
+    saveData();
+    renderLeads();
+    renderDashboard();
+    document.getElementById('import-preview').innerHTML = `<div style="background:#d1fae5; padding:12px; border-radius:12px;">✅ ${imported} leads importados!</div>`;
+    showToast(`${imported} leads importados!`);
+  };
+  r.readAsBinaryString(f);
+}
+
+// ==================== RELATÓRIOS ====================
+function renderRelatorios() {
+  let leads = currentUser.role === 'Consultor' ? S.leads.filter(l => l.responsavel === currentUser.nome) : S.leads;
+  let pipeline = leads.filter(l => l.status === 'Prospect' && l.pipeline);
+  let probMap = { Agendamento: 20, Apresentação: 40, Negociação: 70, Fechamento: 90 };
+  document.getElementById('forecast-table').innerHTML = pipeline.map(l => `
+    <tr>
+      <td>${l.responsavel || '—'}</td>
+      <td><strong>${l.empresa}</strong></td>
+      <td>${l.segmento || '—'}</td>
+      <td>R$ ${(l.implantacao || 0).toLocaleString('pt-BR')}</td>
+      <td><span class="tag tag-warning">${l.pipeline}</span></td>
+      <td>${probMap[l.pipeline] || 0}%</span></td>
+    </tr>
+  `).join('') || '<tr><td colspan="6" style="text-align:center">Sem leads em pipeline</td></tr>';
+
+  let consultores = [...new Set([...leads.map(l => l.responsavel), ...S.vendas.map(v => v.consultor)].filter(Boolean))];
+  document.getElementById('produtividade-table').innerHTML = consultores.map(c => {
+    let leadsC = leads.filter(l => l.responsavel === c);
+    let vendasC = S.vendas.filter(v => v.consultor === c);
+    let receita = vendasC.reduce((s, v) => s + v.implantacao + v.mensalidade, 0);
+    let taxa = leadsC.length > 0 ? Math.round(vendasC.length / leadsC.length * 100) : 0;
+    return `
+      <tr>
+        <td><strong>${c}</strong></td>
+        <td>${leadsC.length}</td>
+        <td>${vendasC.length}</td>
+        <td>R$ ${receita.toLocaleString('pt-BR')}</td>
+        <td><span class="tag ${taxa >= 30 ? 'tag-success' : taxa >= 15 ? 'tag-warning' : 'tag-danger'}">${taxa}%</span></td>
+      </tr>
     `;
+  }).join('');
+}
+
+function exportForecast() {
+  let leads = S.leads.filter(l => l.status === 'Prospect' && l.pipeline);
+  let ws = XLSX.utils.json_to_sheet(leads.map(l => ({ Consultor: l.responsavel, Cliente: l.empresa, Valor: l.implantacao || 0, Etapa: l.pipeline })));
+  let wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Forecast');
+  XLSX.writeFile(wb, `forecast_${new Date().toISOString().split('T')[0]}.xlsx`);
+  showToast('Forecast exportado!');
+}
+
+// ==================== USUÁRIOS ====================
+function renderUsuarios() {
+  let tb = document.getElementById('users-table');
+  tb.innerHTML = S.usuarios.map(u => `
+    <tr>
+      <td><strong>${u.nome}</strong><br><small style="color:#666">${u.login}</small></td>
+      <td><span class="tag ${u.role === 'Diretor' ? 'tag-purple' : u.role === 'Gerente' ? 'tag-info' : 'tag-success'}">${u.role}</span></td>
+      <td>
+        <button class="btn btn-outline" style="padding:4px 12px;" onclick="editUser('${u.id}')"><i class="fas fa-edit"></i></button>
+        ${u.id !== 'u1' ? `<button class="btn" style="padding:4px 12px; background:#fee2e2; color:#ef4444; margin-left:4px;" onclick="deleteUser('${u.id}')"><i class="fas fa-trash"></i></button>` : ''}
+      </td>
+    </table>
+  `).join('');
+}
+
+function openUserModal() {
+  document.getElementById('user-nome').value = '';
+  document.getElementById('user-login').value = '';
+  document.getElementById('user-senha').value = '';
+  document.getElementById('user-perfil').value = 'Consultor';
+  delete document.getElementById('modal-user').dataset.editId;
+  openModal('modal-user');
+}
+
+function editUser(id) {
+  let u = S.usuarios.find(u => u.id === id);
+  if (!u) return;
+  document.getElementById('user-nome').value = u.nome;
+  document.getElementById('user-login').value = u.login;
+  document.getElementById('user-perfil').value = u.role;
+  document.getElementById('user-senha').value = '';
+  document.getElementById('modal-user').dataset.editId = id;
+  openModal('modal-user');
+}
+
+function saveUser() {
+  let id = document.getElementById('modal-user').dataset.editId;
+  let nome = document.getElementById('user-nome').value.trim();
+  let login = document.getElementById('user-login').value.trim();
+  let role = document.getElementById('user-perfil').value;
+  let senha = document.getElementById('user-senha').value;
+  if (!nome || !login) { showToast('Preencha nome e login!', 'error'); return; }
+  if (id) {
+    let idx = S.usuarios.findIndex(u => u.id === id);
+    if (idx !== -1) {
+      S.usuarios[idx].nome = nome;
+      S.usuarios[idx].login = login;
+      S.usuarios[idx].role = role;
+      if (senha) S.usuarios[idx].senha = senha;
+    }
+  } else {
+    if (!senha) { showToast('Senha obrigatória!', 'error'); return; }
+    S.usuarios.push({ id: uid(), nome, login, senha, role });
   }
-  
-  container.innerHTML = html;
+  saveData();
+  closeModal('modal-user');
+  renderUsuarios();
+  showToast('Usuário salvo!');
 }
 
-// ========== MODAL ==========
-function openModalFromPlace(place) {
-  currentPlace = place;
-  const existing = companiesList.find(c => c.placeId === place.place_id);
-  document.getElementById('modal-name').value = place.name || '';
-  document.getElementById('modal-address').value = place.formatted_address || place.vicinity || '';
-  document.getElementById('modal-system').value = existing?.system || '';
-  document.getElementById('modal-counter').value = existing?.counter || '';
-  document.getElementById('check-customer').checked = existing?.isCustomer || false;
-  document.getElementById('check-exclient').checked = existing?.isExClient || false;
-  document.getElementById('check-competitor').checked = existing?.isCompetitor || false;
-  document.getElementById('check-visited').checked = existing?.isVisited || false;
-  document.getElementById('modal-competitor-name').value = existing?.competitorName || '';
-  document.getElementById('competitor-field').style.display = existing?.isCompetitor ? 'block' : 'none';
-  currentEditId = existing?.id || null;
-  document.getElementById('modal-overlay').classList.add('open');
-}
-
-function openCompanyModal(company) {
-  currentPlace = null;
-  document.getElementById('modal-name').value = company.name || '';
-  document.getElementById('modal-address').value = company.address || '';
-  document.getElementById('modal-system').value = company.system || '';
-  document.getElementById('modal-counter').value = company.counter || '';
-  document.getElementById('check-customer').checked = company.isCustomer || false;
-  document.getElementById('check-exclient').checked = company.isExClient || false;
-  document.getElementById('check-competitor').checked = company.isCompetitor || false;
-  document.getElementById('check-visited').checked = company.isVisited || false;
-  document.getElementById('modal-competitor-name').value = company.competitorName || '';
-  document.getElementById('competitor-field').style.display = company.isCompetitor ? 'block' : 'none';
-  currentEditId = company.id;
-  document.getElementById('modal-overlay').classList.add('open');
-}
-
-document.getElementById('check-competitor')?.addEventListener('change', function() {
-  document.getElementById('competitor-field').style.display = this.checked ? 'block' : 'none';
-});
-document.getElementById('check-customer')?.addEventListener('change', function() {
-  if (this.checked) { document.getElementById('check-exclient').checked = false; document.getElementById('check-competitor').checked = false; }
-});
-document.getElementById('check-exclient')?.addEventListener('change', function() {
-  if (this.checked) { document.getElementById('check-customer').checked = false; document.getElementById('check-competitor').checked = false; }
-});
-
-async function saveCompany() {
-  const system = document.getElementById('modal-system').value.trim();
-  const counter = document.getElementById('modal-counter').value.trim();
-  if (!system || !counter) { showNotif('Preencha sistema e contador', 'error'); return; }
-  
-  const isCustomer = document.getElementById('check-customer').checked;
-  const isExClient = document.getElementById('check-exclient').checked;
-  const isCompetitor = document.getElementById('check-competitor').checked;
-  const isVisited = document.getElementById('check-visited').checked;
-  
-  if (!isCustomer && !isExClient && !isCompetitor) { showNotif('Selecione a classificação', 'error'); return; }
-  
-  let competitorName = null;
-  if (isCompetitor) {
-    competitorName = document.getElementById('modal-competitor-name').value.trim();
-    if (!competitorName) { showNotif('Informe o nome do concorrente', 'error'); return; }
+function deleteUser(id) {
+  if (confirm('Remover este usuário?')) {
+    S.usuarios = S.usuarios.filter(u => u.id !== id);
+    saveData();
+    renderUsuarios();
+    showToast('Usuário removido!');
   }
-  
-  let data = { system, counter, isCustomer, isExClient, isCompetitor, isVisited, competitorName, updatedAt: new Date().toISOString() };
-  if (currentPlace) {
-    data = { ...data, placeId: currentPlace.place_id, name: document.getElementById('modal-name').value, address: document.getElementById('modal-address').value, lat: currentPlace.geometry.location.lat(), lng: currentPlace.geometry.location.lng(), createdAt: new Date().toISOString() };
-  }
-  await saveCompanyToFirestore(data);
 }
 
-function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); currentPlace = null; currentEditId = null; }
+// ==================== DASHBOARD ====================
+function renderDashboard() {
+  let leads = S.leads;
+  let vendas = S.vendas;
+  let receitaTotal = vendas.reduce((s, v) => s + v.implantacao + v.mensalidade, 0);
+  let taxa = leads.length > 0 ? Math.round(vendas.length / leads.length * 100) : 0;
+  document.getElementById('stat-total-leads').innerText = leads.length;
+  document.getElementById('stat-fechamentos').innerText = vendas.length;
+  document.getElementById('stat-receita').innerText = `R$ ${receitaTotal.toLocaleString('pt-BR')}`;
+  document.getElementById('stat-conversao').innerText = `${taxa}%`;
 
-// ========== ADMIN ==========
-async function loadAdminPanel() {
-  const panel = document.getElementById('admin-panel');
-  if (!panel) return;
-  const usersSnapshot = await db.collection('users').get();
-  let html = '<div class="report-card"><strong>👥 Usuários</strong><table class="table"><thead><tr><th>Email</th><th>Função</th><th>Ações</th></tr></thead><tbody>';
-  usersSnapshot.forEach(doc => {
-    const user = doc.data();
-    html += `<tr><td>${user.email}</td><td><select id="role-${doc.id}" class="filter-select"><option ${user.role==='diretor'?'selected':''}>diretor</option><option ${user.role==='gerente'?'selected':''}>gerente</option><option ${user.role==='consultor'?'selected':''}>consultor</option></select></td><td><button class="btn-sm" onclick="updateUserRole('${doc.id}')">Salvar</button></td></tr>`;
+  let realImpl = vendas.reduce((s, v) => s + v.implantacao, 0);
+  let pct = S.metaG.impl > 0 ? Math.min(100, Math.round(realImpl / S.metaG.impl * 100)) : 0;
+  document.getElementById('meta-progress').innerHTML = `
+    <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+      <span>Meta ${S.metaG.periodo}</span>
+      <span><strong>R$ ${realImpl.toLocaleString('pt-BR')}</strong> / R$ ${S.metaG.impl.toLocaleString('pt-BR')}</span>
+    </div>
+    <div style="background: #e2e8f0; border-radius: 20px; overflow: hidden;">
+      <div style="width: ${pct}%; background: linear-gradient(135deg, #667eea, #764ba2); height: 20px; border-radius: 20px;"></div>
+    </div>
+    <div style="margin-top: 12px; text-align: center; font-size: 28px; font-weight: 800;">${pct}%</div>
+  `;
+
+  // Gráficos
+  let statusCount = { Oportunidade: 0, Prospect: 0, Captado: 0, Descartado: 0 };
+  leads.forEach(l => { statusCount[l.status] = (statusCount[l.status] || 0) + 1; });
+  
+  if (charts.sales) charts.sales.destroy();
+  if (charts.status) charts.status.destroy();
+  
+  let ctxSales = document.getElementById('sales-chart').getContext('2d');
+  charts.sales = new Chart(ctxSales, {
+    type: 'line',
+    data: { labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'], datasets: [{ label: 'Vendas', data: [12, 19, 15, 17, 14, 23], borderColor: '#6366f1', backgroundColor: 'rgba(99, 102, 241, 0.1)', fill: true }] },
+    options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom' } } }
   });
-  html += '</tbody></table></div><div class="report-card"><strong>➕ Novo Usuário</strong><div class="search-row"><input type="email" id="new-user-email" placeholder="Email" class="filter-input"><input type="password" id="new-user-pass" placeholder="Senha" class="filter-input"><select id="new-user-role" class="filter-select"><option>consultor</option><option>gerente</option><option>diretor</option></select><button class="btn-sm" onclick="createNewUser()" style="background:#3b82f6;color:#fff">Criar</button></div></div>';
-  panel.innerHTML = html;
-}
-
-window.updateUserRole = async function(userId) {
-  const newRole = document.getElementById(`role-${userId}`).value;
-  await db.collection('users').doc(userId).update({ role: newRole });
-  showNotif('Função atualizada!', 'success');
-};
-
-window.createNewUser = async function() {
-  const email = document.getElementById('new-user-email').value;
-  const pass = document.getElementById('new-user-pass').value;
-  const role = document.getElementById('new-user-role').value;
-  if (!email || !pass) { showNotif('Preencha email e senha', 'error'); return; }
-  try {
-    const userCred = await auth.createUserWithEmailAndPassword(email, pass);
-    await db.collection('users').doc(userCred.user.uid).set({ email, role });
-    showNotif('Usuário criado!', 'success');
-    loadAdminPanel();
-  } catch (error) { showNotif('Erro: ' + error.message, 'error'); }
-};
-
-// ========== UTILITÁRIOS ==========
-function filterByStatus(status, btn) {
-  document.querySelectorAll('.map-controls .btn-sm').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  const cards = document.querySelectorAll('.company-card');
-  cards.forEach(card => {
-    const text = card.innerText;
-    if (status === 'all') card.style.display = 'block';
-    else if (status === 'customer' && text.includes('Cliente')) card.style.display = 'block';
-    else if (status === 'exclient' && text.includes('Ex-Cliente')) card.style.display = 'block';
-    else if (status === 'competitor' && text.includes('Concorrente')) card.style.display = 'block';
-    else if (status === 'visited' && text.includes('Visitado')) card.style.display = 'block';
-    else card.style.display = 'none';
+  
+  let ctxStatus = document.getElementById('status-chart').getContext('2d');
+  charts.status = new Chart(ctxStatus, {
+    type: 'doughnut',
+    data: { labels: ['Oportunidade', 'Prospect', 'Captado', 'Descartado'], datasets: [{ data: [statusCount.Oportunidade, statusCount.Prospect, statusCount.Captado, statusCount.Descartado], backgroundColor: ['#3b82f6', '#8b5cf6', '#10b981', '#ef4444'] }] },
+    options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom' } } }
   });
 }
 
-function switchTab(tab, btn) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById(tab + '-tab').classList.add('active');
-  if (tab === 'market') updateMarketShare();
-  if (tab === 'reports') updateReports();
-  if (tab === 'competitors') updateCompetitorsList();
-  if (tab === 'admin' && currentUserRole === 'diretor') loadAdminPanel();
+// ==================== UTILS ====================
+function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+function renderAll() {
+  renderDashboard();
+  renderLeads();
+  renderPipeline();
+  renderAgenda();
+  renderCalendar();
+  renderMetas();
+  renderRM();
+  renderCampanhas();
+  renderRelatorios();
+  renderUsuarios();
+  renderEmailHistory();
 }
 
-function doLogout() { auth.signOut(); location.reload(); }
-function setupEventListeners() {
-  const rloc = document.querySelector('input[value="location"]');
-  const rcomp = document.querySelector('input[value="company"]');
-  const sinp = document.getElementById('search-input');
-  const cinp = document.getElementById('company-name-input');
-  if (rloc && rcomp) {
-    rloc.onchange = () => { sinp.style.display = 'block'; cinp.style.display = 'none'; };
-    rcomp.onchange = () => { sinp.style.display = 'none'; cinp.style.display = 'block'; };
-  }
-  document.getElementById('search-input')?.addEventListener('keypress', e => { if (e.key === 'Enter') searchBusinesses(); });
-}
-
-auth.onAuthStateChanged(user => { if (user) loadCompanies().then(() => loadGoogleMaps()); });
+loadData();
 </script>
 </body>
 </html>
