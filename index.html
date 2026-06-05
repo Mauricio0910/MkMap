@@ -2,8 +2,14 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>MarketMap — Sistema Completo</title>
+<meta name="theme-color" content="#3b82f6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MarketMap">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
 <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
@@ -112,6 +118,140 @@
   .empty-state { text-align: center; padding: 2rem; color: #64748b; }
   .progress-bar { height: 8px; background: #2d3a5e; border-radius: 4px; margin-top: 8px; overflow: hidden; }
   .progress-fill { height: 100%; background: #22c55e; width: 0%; }
+
+
+  /* ===== MOBILE / CONSULTOR EM CAMPO ===== */
+  html { height: 100%; -webkit-text-size-adjust: 100%; }
+  body { min-height: 100dvh; touch-action: manipulation; }
+  button, input, select, textarea { font: inherit; }
+  button { min-height: 40px; }
+  .field-input, .filter-select, .filter-input, .search-input { min-height: 44px; }
+  textarea.field-input { resize: vertical; line-height: 1.35; }
+  .mobile-quick-add { display: none; background: #22c55e; color: #fff; border-color: #22c55e; font-weight: 700; }
+  .btn-location { background: rgba(34,197,94,0.14); color: #86efac; border-color: rgba(34,197,94,0.35); }
+  .btn-location:hover { background: rgba(34,197,94,0.22); color: #fff; }
+  .notif.info { border-left: 3px solid #3b82f6; }
+  .table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  .table th, .table td { padding: 10px; border-bottom: 1px solid #2d3a5e; text-align: left; font-size: 13px; }
+
+  @media (max-width: 900px) {
+    body { height: auto; overflow: hidden; }
+    .screen { height: 100dvh; min-height: 100dvh; }
+    #screen-login { padding: 16px; }
+    .login-box { max-width: none; padding: 1.25rem; border-radius: 18px; }
+    .logo { font-size: 24px; margin-bottom: 1.2rem; }
+
+    #screen-app { position: relative; overflow: hidden; }
+    .topbar {
+      min-height: 56px;
+      height: auto;
+      padding: calc(env(safe-area-inset-top, 0px) + 8px) 10px 8px;
+      gap: 8px;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 20;
+    }
+    .topbar-logo { font-size: 16px; flex: 1 1 auto; min-width: 135px; }
+    .role-badge { padding: 4px 10px; font-size: 11px; }
+    .btn-icon { padding: 6px 10px; }
+    .mobile-quick-add { display: inline-flex; align-items: center; justify-content: center; flex: 1 0 100%; }
+
+    .tabs-row {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: calc(62px + env(safe-area-inset-bottom, 0px));
+      padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+      border-top: 1px solid #2d3a5e;
+      border-bottom: none;
+      z-index: 50;
+      gap: 2px;
+      overflow-x: auto;
+      box-shadow: 0 -10px 30px rgba(0,0,0,0.35);
+    }
+    .tab-btn {
+      flex: 1 0 72px;
+      padding: 6px 4px;
+      font-size: 11px;
+      border-bottom: none;
+      border-radius: 12px;
+      white-space: normal;
+      line-height: 1.15;
+    }
+    .tab-btn.active { background: rgba(59,130,246,0.16); border-bottom-color: transparent; }
+    .tab-content { padding-bottom: calc(62px + env(safe-area-inset-bottom, 0px)); }
+
+    .map-wrap { flex-direction: column; height: 100%; }
+    .map-container { flex: 0 0 42dvh; min-height: 260px; width: 100%; }
+    .map-sidebar {
+      width: 100%;
+      flex: 1 1 auto;
+      min-height: 0;
+      border-left: none;
+      border-top: 1px solid #2d3a5e;
+    }
+    .map-legend {
+      left: 10px;
+      bottom: 10px;
+      font-size: 10px;
+      padding: 7px 9px;
+      max-width: calc(100% - 20px);
+    }
+    .search-bar { padding: 10px; }
+    .search-type { gap: 8px; flex-wrap: wrap; }
+    .search-type label { font-size: 12px; }
+    .search-row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; }
+    .search-row + .search-row { grid-template-columns: 1fr; }
+    .btn-search { padding: 8px 10px; min-width: 48px; }
+    .map-controls { padding: 8px 10px; gap: 7px; overflow-x: auto; flex-wrap: nowrap; }
+    .btn-sm { min-height: 38px; padding: 6px 11px; white-space: nowrap; }
+    .company-list { padding: 10px; }
+    .company-card { padding: 14px; margin-bottom: 10px; border-radius: 14px; }
+    .company-name { font-size: 15px; }
+    .company-addr { font-size: 12px; line-height: 1.35; }
+
+    .reports-container, .market-container { padding: 10px 10px calc(76px + env(safe-area-inset-bottom, 0px)); }
+    .filter-bar { display: grid; grid-template-columns: 1fr; gap: 10px; padding: 12px; }
+    .filter-group { min-width: 0; }
+    .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .stat-card { padding: 12px 8px; }
+    .stat-number { font-size: 26px; }
+    .company-row { align-items: flex-start; gap: 8px; padding: 12px 4px; }
+    .company-row > div:last-child { flex-shrink: 0; }
+
+    .modal-overlay { align-items: flex-end; padding: 0; }
+    .modal {
+      width: 100%;
+      max-width: none;
+      max-height: 94dvh;
+      border-radius: 20px 20px 0 0;
+      box-shadow: 0 -16px 50px rgba(0,0,0,0.45);
+    }
+    .modal-header { padding: 1rem; position: sticky; top: 0; background: #1a2035; z-index: 2; }
+    .modal-body { padding: 1rem; gap: 0.85rem; }
+    .modal-footer {
+      position: sticky;
+      bottom: 0;
+      background: #1a2035;
+      padding: 0.85rem 1rem calc(0.85rem + env(safe-area-inset-bottom, 0px));
+      justify-content: stretch;
+    }
+    .modal-footer button { flex: 1; min-height: 44px; }
+    .checkbox-group, .radio-group { gap: 10px; }
+    .checkbox-group label, .radio-group label { flex: 1 1 145px; background: #111520; border: 1px solid #2d3a5e; padding: 10px; border-radius: 12px; }
+    .field-input, .filter-select, .filter-input, .search-input { font-size: 16px; }
+    .notif { left: 10px; right: 10px; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+  }
+
+  @media (max-width: 420px) {
+    .stats-grid { grid-template-columns: 1fr; }
+    .map-container { flex-basis: 38dvh; min-height: 220px; }
+    .search-row { grid-template-columns: 1fr; }
+    .btn-search { width: 100%; }
+    .map-legend { display: none; }
+  }
+
 </style>
 </head>
 <body>
@@ -132,6 +272,7 @@
   <div class="topbar">
     <div class="topbar-logo">Market<span>Map</span></div>
     <div class="role-badge" id="role-badge">Carregando...</div>
+    <button class="btn-icon mobile-quick-add" onclick="openManualCompanyModal()">➕ Cadastro rápido</button>
     <button class="btn-icon" onclick="doLogout()">Sair</button>
   </div>
   <div class="tabs-row">
@@ -168,6 +309,7 @@
           </div>
         </div>
         <div class="map-controls">
+          <button class="btn-sm btn-location" onclick="centerOnUserLocation()">📍 Minha região</button>
           <button class="btn-sm active" onclick="filterByStatus('all',this)">Todas</button>
           <button class="btn-sm" onclick="filterByStatus('customer',this)">Clientes</button>
           <button class="btn-sm" onclick="filterByStatus('exclient',this)">Ex-Clientes</button>
@@ -219,6 +361,14 @@
         <div class="field-group"><div class="field-label">👥 Contador Responsável</div><input type="text" id="modal-counter" class="field-input" placeholder="Nome da contabilidade"></div>
       </div>
       
+      <div class="section-title">📲 DADOS DE CAMPO</div>
+      <div class="field-group"><div class="field-label">👤 Responsável / Contato</div><input type="text" id="modal-contact" class="field-input" placeholder="Nome da pessoa de contato"></div>
+      <div class="field-group"><div class="field-label">📱 Telefone / WhatsApp</div><input type="tel" id="modal-phone" class="field-input" placeholder="(00) 00000-0000"></div>
+      <div class="field-group"><div class="field-label">💰 Potencial estimado</div><input type="text" id="modal-potential" class="field-input" placeholder="Ex: 3 caixas, 15 usuários, R$ 900/mês"></div>
+      <div class="field-group"><div class="field-label">🎯 Próxima ação</div><input type="text" id="modal-next-action" class="field-input" placeholder="Ex: agendar demonstração, enviar proposta, retornar"></div>
+      <div class="field-group"><div class="field-label">📅 Data da próxima ação</div><input type="date" id="modal-next-date" class="field-input"></div>
+      <div class="field-group"><div class="field-label">📝 Observações da visita</div><textarea id="modal-notes" class="field-input" rows="3" placeholder="Dores, objeções, concorrente atual, oportunidade percebida..."></textarea></div>
+      
       <div class="section-title">📊 CLASSIFICAÇÃO</div>
       <div class="checkbox-group">
         <label><input type="checkbox" id="check-customer"> ✅ Cliente</label>
@@ -267,6 +417,14 @@
         <div class="field-group"><div class="field-label">👥 Contador Responsável</div><input type="text" id="manual-counter" class="field-input" placeholder="Nome da contabilidade"></div>
       </div>
       
+      <div class="section-title">📲 DADOS DE CAMPO</div>
+      <div class="field-group"><div class="field-label">👤 Responsável / Contato</div><input type="text" id="manual-contact" class="field-input" placeholder="Nome da pessoa de contato"></div>
+      <div class="field-group"><div class="field-label">📱 Telefone / WhatsApp</div><input type="tel" id="manual-phone" class="field-input" placeholder="(00) 00000-0000"></div>
+      <div class="field-group"><div class="field-label">💰 Potencial estimado</div><input type="text" id="manual-potential" class="field-input" placeholder="Ex: 3 caixas, 15 usuários, R$ 900/mês"></div>
+      <div class="field-group"><div class="field-label">🎯 Próxima ação</div><input type="text" id="manual-next-action" class="field-input" placeholder="Ex: agendar demonstração, enviar proposta, retornar"></div>
+      <div class="field-group"><div class="field-label">📅 Data da próxima ação</div><input type="date" id="manual-next-date" class="field-input"></div>
+      <div class="field-group"><div class="field-label">📝 Observações da visita</div><textarea id="manual-notes" class="field-input" rows="3" placeholder="Dores, objeções, concorrente atual, oportunidade percebida..."></textarea></div>
+      
       <div class="section-title">📊 CLASSIFICAÇÃO</div>
       <div class="checkbox-group">
         <label><input type="checkbox" id="manual-check-customer"> ✅ Cliente</label>
@@ -308,6 +466,7 @@ const db = firebase.firestore();
 
 // ========== VARIÁVEIS ==========
 let map, geocoder, markers = [], companiesList = [], currentPlace = null;
+let mapsLoading = false, mapsLoaded = false;
 let currentUser = null, currentUserRole = 'consultor';
 let placesService = null;
 let currentEditId = null;
@@ -402,18 +561,23 @@ async function saveCompanyToFirestore(data) {
 }
 
 function loadGoogleMaps() {
+  if (mapsLoaded || mapsLoading) return;
+  mapsLoading = true;
   let key = localStorage.getItem('mm_gkey');
   if (!key) {
     key = prompt('🔑 Chave da Google Maps API:');
     if (key && key.startsWith('AIza')) localStorage.setItem('mm_gkey', key);
-    else return;
+    else { mapsLoading = false; return; }
   }
   const script = document.createElement('script');
   script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places,geometry&callback=initMap`;
+  script.onerror = () => { mapsLoading = false; showNotif('Não foi possível carregar o Google Maps. Confira a chave API.', 'error'); };
   document.head.appendChild(script);
 }
 
 function initMap() {
+  mapsLoaded = true;
+  mapsLoading = false;
   document.getElementById('screen-login').classList.remove('active');
   document.getElementById('screen-app').classList.add('active');
   map = new google.maps.Map(document.getElementById('google-map'), { zoom: 12, center: { lat: -23.5505, lng: -46.6333 } });
@@ -424,7 +588,26 @@ function initMap() {
   updateReports();
   updateCompetitorsList();
   setupEventListeners();
+  centerOnUserLocation(false);
   showNotif('✅ Mapa carregado!', 'success');
+}
+
+function centerOnUserLocation(showMessages = true) {
+  if (!navigator.geolocation) {
+    if (showMessages) showNotif('Geolocalização não disponível neste dispositivo.', 'error');
+    return;
+  }
+  if (showMessages) showNotif('Localizando sua região...', 'info');
+  navigator.geolocation.getCurrentPosition(position => {
+    const userPos = { lat: position.coords.latitude, lng: position.coords.longitude };
+    if (map) {
+      map.setCenter(userPos);
+      map.setZoom(14);
+    }
+    if (showMessages) showNotif('Região atualizada no mapa.', 'success');
+  }, () => {
+    if (showMessages) showNotif('Não foi possível obter sua localização. Verifique a permissão do navegador.', 'error');
+  }, { enableHighAccuracy: true, timeout: 8000, maximumAge: 120000 });
 }
 
 function loadMarkers() {
@@ -528,6 +711,12 @@ function openManualCompanyModal() {
   document.getElementById('manual-check-competitor').checked = false;
   document.getElementById('manual-check-visited').checked = false;
   document.getElementById('manual-competitor-name').value = '';
+  document.getElementById('manual-contact').value = '';
+  document.getElementById('manual-phone').value = '';
+  document.getElementById('manual-potential').value = '';
+  document.getElementById('manual-next-action').value = '';
+  document.getElementById('manual-next-date').value = '';
+  document.getElementById('manual-notes').value = '';
   document.getElementById('manual-system-fields').style.display = 'none';
   document.getElementById('manual-competitor-field').style.display = 'none';
   
@@ -588,6 +777,12 @@ async function saveManualCompany() {
   const isCompetitor = document.getElementById('manual-check-competitor').checked;
   const isVisited = document.getElementById('manual-check-visited').checked;
   const competitorName = document.getElementById('manual-competitor-name').value.trim();
+  const contactName = document.getElementById('manual-contact').value.trim();
+  const phone = document.getElementById('manual-phone').value.trim();
+  const potential = document.getElementById('manual-potential').value.trim();
+  const nextAction = document.getElementById('manual-next-action').value.trim();
+  const nextActionDate = document.getElementById('manual-next-date').value;
+  const notes = document.getElementById('manual-notes').value.trim();
   
   if (!name) { showNotif('Digite o nome da empresa', 'error'); return; }
   if (!address) { showNotif('Digite o endereço', 'error'); return; }
@@ -644,6 +839,13 @@ async function saveManualCompany() {
     isCompetitor: isCompetitor,
     isVisited: isVisited,
     competitorName: isCompetitor ? competitorName : null,
+    contactName: contactName || null,
+    phone: phone || null,
+    potential: potential || null,
+    nextAction: nextAction || null,
+    nextActionDate: nextActionDate || null,
+    notes: notes || null,
+    capturedBy: auth.currentUser ? auth.currentUser.email : null,
     isManual: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -918,6 +1120,12 @@ function openModalFromPlace(place) {
   document.getElementById('check-competitor').checked = existing?.isCompetitor || false;
   document.getElementById('check-visited').checked = existing?.isVisited || false;
   document.getElementById('modal-competitor-name').value = existing?.competitorName || '';
+  document.getElementById('modal-contact').value = existing?.contactName || '';
+  document.getElementById('modal-phone').value = existing?.phone || '';
+  document.getElementById('modal-potential').value = existing?.potential || '';
+  document.getElementById('modal-next-action').value = existing?.nextAction || '';
+  document.getElementById('modal-next-date').value = existing?.nextActionDate || '';
+  document.getElementById('modal-notes').value = existing?.notes || '';
   document.getElementById('competitor-field').style.display = existing?.isCompetitor ? 'block' : 'none';
   currentEditId = existing?.id || null;
   document.getElementById('modal-overlay').classList.add('open');
@@ -953,6 +1161,12 @@ function openCompanyModal(company) {
   document.getElementById('check-competitor').checked = company.isCompetitor || false;
   document.getElementById('check-visited').checked = company.isVisited || false;
   document.getElementById('modal-competitor-name').value = company.competitorName || '';
+  document.getElementById('modal-contact').value = company.contactName || '';
+  document.getElementById('modal-phone').value = company.phone || '';
+  document.getElementById('modal-potential').value = company.potential || '';
+  document.getElementById('modal-next-action').value = company.nextAction || '';
+  document.getElementById('modal-next-date').value = company.nextActionDate || '';
+  document.getElementById('modal-notes').value = company.notes || '';
   document.getElementById('competitor-field').style.display = company.isCompetitor ? 'block' : 'none';
   currentEditId = company.id;
   document.getElementById('modal-overlay').classList.add('open');
@@ -974,10 +1188,18 @@ document.getElementById('check-competitor')?.addEventListener('change', function
   document.getElementById('competitor-field').style.display = this.checked ? 'block' : 'none';
 });
 document.getElementById('check-customer')?.addEventListener('change', function() {
-  if (this.checked) { document.getElementById('check-exclient').checked = false; document.getElementById('check-competitor').checked = false; }
+  if (this.checked) {
+    document.getElementById('check-exclient').checked = false;
+    document.getElementById('check-competitor').checked = false;
+    document.getElementById('competitor-field').style.display = 'none';
+  }
 });
 document.getElementById('check-exclient')?.addEventListener('change', function() {
-  if (this.checked) { document.getElementById('check-customer').checked = false; document.getElementById('check-competitor').checked = false; }
+  if (this.checked) {
+    document.getElementById('check-customer').checked = false;
+    document.getElementById('check-competitor').checked = false;
+    document.getElementById('competitor-field').style.display = 'none';
+  }
 });
 
 async function saveCompany() {
@@ -990,6 +1212,12 @@ async function saveCompany() {
   const isCompetitor = document.getElementById('check-competitor').checked;
   const isVisited = document.getElementById('check-visited').checked;
   const competitorName = document.getElementById('modal-competitor-name').value.trim();
+  const contactName = document.getElementById('modal-contact').value.trim();
+  const phone = document.getElementById('modal-phone').value.trim();
+  const potential = document.getElementById('modal-potential').value.trim();
+  const nextAction = document.getElementById('modal-next-action').value.trim();
+  const nextActionDate = document.getElementById('modal-next-date').value;
+  const notes = document.getElementById('modal-notes').value.trim();
   
   if (hasSystemRadio && hasSystemRadio.value === 'has_system') {
     if (!system) { showNotif('Informe o sistema utilizado', 'error'); return; }
@@ -1015,6 +1243,13 @@ async function saveCompany() {
     isCompetitor: isCompetitor,
     isVisited: isVisited,
     competitorName: isCompetitor ? competitorName : null,
+    contactName: contactName || null,
+    phone: phone || null,
+    potential: potential || null,
+    nextAction: nextAction || null,
+    nextActionDate: nextActionDate || null,
+    notes: notes || null,
+    capturedBy: auth.currentUser ? auth.currentUser.email : null,
     updatedAt: new Date().toISOString()
   };
   
@@ -1035,7 +1270,7 @@ async function loadAdminPanel() {
   let html = '<div class="report-card"><strong>👥 Usuários</strong><table class="table"><thead><tr><th>Email</th><th>Função</th><th>Ações</th></tr></thead><tbody>';
   usersSnapshot.forEach(doc => {
     const user = doc.data();
-    html += `<tr><td>${user.email}</td>}<select id="role-${doc.id}" class="filter-select"><option ${user.role==='diretor'?'selected':''}>diretor</option><option ${user.role==='gerente'?'selected':''}>gerente</option><option ${user.role==='consultor'?'selected':''}>consultor</option></select></td>}<button class="btn-sm" onclick="updateUserRole('${doc.id}')">Salvar</button></td></tr>`;
+    html += `<tr><td>${user.email || ''}</td><td><select id="role-${doc.id}" class="filter-select"><option ${user.role==='diretor'?'selected':''}>diretor</option><option ${user.role==='gerente'?'selected':''}>gerente</option><option ${user.role==='consultor'?'selected':''}>consultor</option></select></td><td><button class="btn-sm" onclick="updateUserRole('${doc.id}')">Salvar</button></td></tr>`;
   });
   html += '</tbody></table></div><div class="report-card"><strong>➕ Novo Usuário</strong><div class="search-row"><input type="email" id="new-user-email" placeholder="Email" class="filter-input"><input type="password" id="new-user-pass" placeholder="Senha" class="filter-input"><select id="new-user-role" class="filter-select"><option>consultor</option><option>gerente</option><option>diretor</option></select><button class="btn-sm" onclick="createNewUser()" style="background:#3b82f6;color:#fff">Criar</button></div></div>';
   panel.innerHTML = html;
@@ -1102,6 +1337,16 @@ function setupEventListeners() {
 }
 
 auth.onAuthStateChanged(user => { if (user) loadCompanies().then(() => loadGoogleMaps()); });
+
+// ========== PWA / INSTALAÇÃO MOBILE ==========
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(error => {
+      console.warn('Service Worker não registrado:', error);
+    });
+  });
+}
+
 </script>
 </body>
 </html>
