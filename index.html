@@ -770,69 +770,279 @@ function renderSavedCompanies(status = currentListFilter) {
   });
 }
 
-async function searchBusinesses() {
-  const searchType = document.querySelector('input[name="searchType"]:checked').value;
-  let query = searchType === 'location' ? document.getElementById('search-input').value.trim() : document.getElementById('company-name-input').value.trim();
-  if (!query) { showNotif('Digite algo', 'error'); return; }
-  
+function normalizeSearchText(value) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getCompanySearchBlob(company) {
+  const loc = extractLocationDetails(company.address || '');
+  return normalizeSearchText([
+    company.name,
+    company.address,
+    company.competitorName,
+    company.system,
+    company.counter,
+    company.salesContact,
+    loc.city,
+    loc.state,
+    loc.neighborhood,
+    loc.street
+  ].filter(Boolean).join(' '));
+}
+
+function getCompanyCoordinates(company) {
+  const lat = Number(company.lat);
+  const lng = Number(company.lng);
+  if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
+  return null;
+}
+
+function getGoogleLatLngLiteral(location) {
+  if (!location) return null;
+  const lat = typeof location.lat === 'function' ? location.lat() : Number(location.lat);
+  const lng = typeof location.lng === 'function' ? location.lng() : Number(location.lng);
+  if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
+  return null;
+}
+
+function distanceKm(a, b) {
+  if (!a || !b) return Infinity;
+  const R = 6371;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLng = (b.lng - a.lng) * Math.PI / 180;
+  const lat1 = a.lat * Math.PI / 180;
+  const lat2 = b.lat * Math.PI / 180;
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+
+function getLocationRadiusKm(query) {
+  const q = normalizeSearchText(query);
+  // Cidade: raio maior. Bairro/rua: raio menor. Isso evita o erro de mostrar só 2 km do centro.
+  if (/\b(rua|avenida|av|travessa|alameda|rodovia|setor|bairro|centro|jardim|vila)\b/.test(q)) return 8;
+  return 45;
+}
+
+function companyMatchesLocationSearch(company, query, center, radiusKm) {
+  const normalizedQuery = normalizeSearchText(query);
+  const blob = getCompanySearchBlob(company);
+  const textMatch = normalizedQuery && blob.includes(normalizedQuery);
+  const coords = getCompanyCoordinates(company);
+  const radiusMatch = center && coords && distanceKm(center, coords) <= radiusKm;
+  return textMatch || radiusMatch;
+}
+
+function companyMatchesCompanySearch(company, query) {
+  const normalizedQuery = normalizeSearchText(query);
+  if (!normalizedQuery) return false;
+  return getCompanySearchBlob(company).includes(normalizedQuery);
+}
+
+function findExistingCompanyForPlace(place) {
+  if (!place) return null;
+  if (place.place_id) {
+    const byPlace = companiesList.find(c => c.placeId === place.place_id);
+    if (byPlace) return byPlace;
+  }
+
+  const placeName = normalizeSearchText(place.name || '');
+  const placeAddress = normalizeSearchText(place.formatted_address || place.vicinity || '');
+
+  return companiesList.find(c => {
+    const companyName = normalizeSearchText(c.name || '');
+    const companyAddress = normalizeSearchText(c.address || '');
+    if (!companyName || !placeName) return false;
+    const nameMatch = companyName === placeName || companyName.includes(placeName) || placeName.includes(companyName);
+    const addressMatch = companyAddress && placeAddress && (companyAddress.includes(placeAddress) || placeAddress.includes(companyAddress));
+    return nameMatch && (addressMatch || !placeAddress || !companyAddress);
+  }) || null;
+}
+
+function clearMapMarkers() {
   markers.forEach(m => m.setMap(null));
   markers = [];
-  
-  if (searchType === 'company') {
-    placesService.textSearch({ query, fields: ['name', 'formatted_address', 'geometry', 'place_id'] }, (res, status) => {
-      if (status === 'OK' && res.length) {
-        displayResults(res);
-        if (res[0].geometry) map.setCenter(res[0].geometry.location);
-        map.setZoom(16);
-      } else showNotif('Nenhuma empresa encontrada', 'error');
+}
+
+function getMarkerColorForCompany(company) {
+  if (company.isCustomer) return '#22c55e';
+  if (company.isExClient) return '#f59e0b';
+  if (company.isCompetitor) return '#ef4444';
+  if (company.isManual) return '#a855f7';
+  return '#6b7280';
+}
+
+function addCompanyMarker(company) {
+  if (!map) return;
+  const coords = getCompanyCoordinates(company);
+  if (!coords) return;
+  const marker = new google.maps.Marker({
+    position: coords,
+    map,
+    title: company.name,
+    icon: { path: google.maps.SymbolPath.CIRCLE, fillColor: getMarkerColorForCompany(company), fillOpacity: 1, strokeWeight: 0, scale: 8 }
+  });
+  marker.addListener('click', () => openCompanyModal(company));
+  markers.push(marker);
+}
+
+function addPlaceMarker(place, existingCompany = null) {
+  if (!map || !place?.geometry?.location) return;
+  const color = existingCompany ? getMarkerColorForCompany(existingCompany) : '#6b7280';
+  const marker = new google.maps.Marker({
+    position: place.geometry.location,
+    map,
+    title: place.name,
+    icon: { path: google.maps.SymbolPath.CIRCLE, fillColor: color, fillOpacity: 1, strokeWeight: 0, scale: 8 }
+  });
+  marker.addListener('click', () => existingCompany ? openCompanyModal(existingCompany) : openModalFromPlace(place));
+  markers.push(marker);
+}
+
+function renderSavedCompanyCard(company, container) {
+  const card = document.createElement('div');
+  card.className = getCompanyCardClass(company);
+  card.innerHTML = `
+    <div class="company-name">${escapeHtml(company.name || 'Empresa sem nome')}</div>
+    <div class="company-addr">${escapeHtml(company.address || 'Endereço não informado')}</div>
+    <div class="company-tags">${getCompanyTags(company)}</div>
+  `;
+  card.onclick = () => {
+    const coords = getCompanyCoordinates(company);
+    if (map && coords) {
+      map.setCenter(coords);
+      map.setZoom(16);
+    }
+    openCompanyModal(company);
+  };
+  container.appendChild(card);
+}
+
+function renderPlaceCard(place, container, existing = null) {
+  const card = document.createElement('div');
+  card.className = existing ? getCompanyCardClass(existing) : 'company-card';
+  const tags = existing ? getCompanyTags(existing) : '<span class="tag">➕ Empresa encontrada no Google</span>';
+  card.innerHTML = `
+    <div class="company-name">${escapeHtml(place.name || 'Empresa sem nome')}</div>
+    <div class="company-addr">${escapeHtml(place.formatted_address || place.vicinity || 'Endereço não informado')}</div>
+    <div class="company-tags">${tags}</div>
+  `;
+  card.onclick = () => existing ? openCompanyModal(existing) : openModalFromPlace(place);
+  container.appendChild(card);
+}
+
+function renderCombinedSearchResults({ query, savedMatches = [], googleResults = [], title = 'Resultado da busca' }) {
+  currentListMode = 'search';
+  const listDiv = document.getElementById('company-list');
+  if (!listDiv) return;
+
+  clearMapMarkers();
+  const savedIds = new Set(savedMatches.map(c => c.id));
+  const googleOnly = [];
+
+  googleResults.forEach(place => {
+    const existing = findExistingCompanyForPlace(place);
+    if (existing) {
+      if (!savedIds.has(existing.id)) savedMatches.push(existing);
+      savedIds.add(existing.id);
+    } else {
+      googleOnly.push(place);
+    }
+  });
+
+  const savedFiltered = savedMatches
+    .filter(company => companyMatchesFilter(company, currentListFilter))
+    .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'pt-BR'));
+
+  listDiv.innerHTML = `
+    <div style="padding:10px 12px;color:#94a3b8;font-size:12px;border-bottom:1px solid #2d3a5e">
+      <strong style="color:#60a5fa">${escapeHtml(title)}</strong><br>
+      ${savedFiltered.length} empresa(s) cadastrada(s) encontrada(s)${googleOnly.length ? ` + ${googleOnly.length} sugestão(ões) do Google` : ''}.
+    </div>
+  `;
+
+  if (!savedFiltered.length && !googleOnly.length) {
+    listDiv.insertAdjacentHTML('beforeend', `<div class="empty-state">Nenhuma empresa encontrada para "${escapeHtml(query)}".</div>`);
+    return;
+  }
+
+  if (savedFiltered.length) {
+    listDiv.insertAdjacentHTML('beforeend', `<div style="padding:10px 12px;color:#22c55e;font-size:12px;font-weight:700">EMPRESAS JÁ CADASTRADAS NO FIREBASE</div>`);
+    savedFiltered.forEach(company => {
+      renderSavedCompanyCard(company, listDiv);
+      addCompanyMarker(company);
     });
-  } else {
-    geocoder.geocode({ address: query + ', Brasil' }, (res, status) => {
-      if (status === 'OK' && res[0]) {
-        map.setCenter(res[0].geometry.location);
-        map.setZoom(14);
-        placesService.nearbySearch({ location: res[0].geometry.location, radius: 2000, type: 'establishment' }, (res2, status2) => {
-          if (status2 === 'OK' && res2.length) displayResults(res2);
-          else showNotif('Nenhuma empresa encontrada', 'error');
-        });
-      } else showNotif('Local não encontrado', 'error');
+  }
+
+  if (googleOnly.length) {
+    listDiv.insertAdjacentHTML('beforeend', `<div style="padding:10px 12px;color:#94a3b8;font-size:12px;font-weight:700">SUGESTÕES DO GOOGLE PARA NOVO CADASTRO</div>`);
+    googleOnly.forEach(place => {
+      renderPlaceCard(place, listDiv, null);
+      addPlaceMarker(place, null);
     });
   }
 }
 
-function displayResults(results) {
-  currentListMode = 'search';
-  const listDiv = document.getElementById('company-list');
-  listDiv.innerHTML = '';
-  results.forEach(place => {
-    const existing = companiesList.find(c => c.placeId === place.place_id);
-    let cardClass = 'company-card';
-    let statusTag = '';
-    
-    if (existing) {
-      if (existing.isCustomer) { cardClass += ' client'; statusTag = '<span class="tag tag-client">Cliente</span>'; }
-      else if (existing.isExClient) { cardClass += ' exclient'; statusTag = '<span class="tag tag-exclient">Ex-Cliente</span>'; }
-      else if (existing.isCompetitor) { cardClass += ' competitor'; statusTag = '<span class="tag tag-competitor">Concorrente</span>'; }
-      if (existing.isVisited) statusTag += '<span class="tag tag-visited">Visitada</span>';
-      if (existing.system && !existing.hasNoSystem) statusTag += `<span class="tag tag-system">⚙️ ${existing.system}</span>`;
-      if (existing.hasNoSystem) statusTag += '<span class="tag tag-nosystem">❌ Sem Sistema</span>';
-    } else {
-      statusTag = '<span class="tag">➕ Clique para cadastrar</span>';
+async function searchBusinesses() {
+  const searchType = document.querySelector('input[name="searchType"]:checked').value;
+  const query = searchType === 'location'
+    ? document.getElementById('search-input').value.trim()
+    : document.getElementById('company-name-input').value.trim();
+
+  if (!query) { showNotif('Digite algo', 'error'); return; }
+  if (!placesService || !geocoder) { showNotif('Mapa ainda está carregando. Tente novamente em alguns segundos.', 'error'); return; }
+
+  if (searchType === 'company') {
+    const savedMatches = companiesList.filter(company => companyMatchesCompanySearch(company, query));
+    placesService.textSearch({ query, fields: ['name', 'formatted_address', 'geometry', 'place_id'] }, (res, status) => {
+      const googleResults = status === 'OK' && Array.isArray(res) ? res : [];
+      renderCombinedSearchResults({ query, savedMatches, googleResults, title: `Busca por empresa: ${query}` });
+      const firstSavedCoords = savedMatches.map(getCompanyCoordinates).find(Boolean);
+      if (firstSavedCoords && map) {
+        map.setCenter(firstSavedCoords);
+        map.setZoom(16);
+      } else if (googleResults[0]?.geometry && map) {
+        map.setCenter(googleResults[0].geometry.location);
+        map.setZoom(16);
+      }
+      if (!savedMatches.length && !googleResults.length) showNotif('Nenhuma empresa encontrada', 'error');
+    });
+    return;
+  }
+
+  geocoder.geocode({ address: query + ', Brasil' }, (res, status) => {
+    if (status !== 'OK' || !res?.[0]) {
+      const savedByText = companiesList.filter(company => companyMatchesLocationSearch(company, query, null, 0));
+      renderCombinedSearchResults({ query, savedMatches: savedByText, googleResults: [], title: `Busca local: ${query}` });
+      if (!savedByText.length) showNotif('Local não encontrado', 'error');
+      return;
     }
-    
-    const card = document.createElement('div');
-    card.className = cardClass;
-    card.innerHTML = `<div class="company-name">${place.name}</div><div class="company-addr">${place.formatted_address || place.vicinity}</div><div class="company-tags">${statusTag}</div>`;
-    card.onclick = () => openModalFromPlace(place);
-    listDiv.appendChild(card);
-    
-    if (place.geometry) {
-      let color = existing ? (existing.isCustomer ? '#22c55e' : (existing.isCompetitor ? '#ef4444' : (existing.isExClient ? '#f59e0b' : '#a855f7'))) : '#6b7280';
-      const m = new google.maps.Marker({ position: place.geometry.location, map, title: place.name, icon: { path: google.maps.SymbolPath.CIRCLE, fillColor: color, fillOpacity: 1, strokeWeight: 0, scale: 8 } });
-      m.addListener('click', () => openModalFromPlace(place));
-      markers.push(m);
+
+    const center = getGoogleLatLngLiteral(res[0].geometry.location);
+    const radiusKm = getLocationRadiusKm(query);
+    const savedMatches = companiesList.filter(company => companyMatchesLocationSearch(company, query, center, radiusKm));
+
+    if (map && center) {
+      map.setCenter(center);
+      map.setZoom(radiusKm >= 30 ? 12 : 14);
     }
+
+    // O limite antigo de 2 km era o gargalo. Para cidade, buscamos área maior, mas a lista principal vem do Firebase.
+    placesService.nearbySearch({ location: res[0].geometry.location, radius: Math.min(radiusKm * 1000, 50000), type: 'establishment' }, (res2, status2) => {
+      const googleResults = status2 === 'OK' && Array.isArray(res2) ? res2 : [];
+      renderCombinedSearchResults({ query, savedMatches, googleResults, title: `Busca local: ${query}` });
+      if (!savedMatches.length && !googleResults.length) showNotif('Nenhuma empresa encontrada', 'error');
+    });
   });
+}
+
+function displayResults(results) {
+  renderCombinedSearchResults({ query: 'Google', savedMatches: [], googleResults: results || [], title: 'Resultado do Google' });
 }
 
 // ========== CADASTRO MANUAL ==========
