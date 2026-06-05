@@ -467,6 +467,8 @@ const db = firebase.firestore();
 // ========== VARIÁVEIS ==========
 let map, geocoder, markers = [], companiesList = [], currentPlace = null;
 let mapsLoading = false, mapsLoaded = false;
+let currentListMode = 'saved';
+let currentListFilter = 'all';
 let currentUser = null, currentUserRole = 'consultor';
 let placesService = null;
 let currentEditId = null;
@@ -539,6 +541,7 @@ async function loadCompanies() {
   companiesList = [];
   snapshot.forEach(doc => companiesList.push({ id: doc.id, ...doc.data() }));
   console.log('Empresas carregadas:', companiesList.length);
+  if (map) renderSavedCompanies();
 }
 
 async function saveCompanyToFirestore(data) {
@@ -553,6 +556,7 @@ async function saveCompanyToFirestore(data) {
   }
   await loadCompanies();
   loadMarkers();
+  renderSavedCompanies();
   updateMarketShare();
   updateReports();
   updateCompetitorsList();
@@ -584,6 +588,7 @@ function initMap() {
   geocoder = new google.maps.Geocoder();
   placesService = new google.maps.places.PlacesService(map);
   loadMarkers();
+  renderSavedCompanies();
   updateMarketShare();
   updateReports();
   updateCompetitorsList();
@@ -634,6 +639,83 @@ function loadMarkers() {
   });
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function getCompanyCardClass(company) {
+  let cardClass = 'company-card';
+  if (company.isCustomer) cardClass += ' client';
+  else if (company.isExClient) cardClass += ' exclient';
+  else if (company.isCompetitor) cardClass += ' competitor';
+  else if (company.isManual) cardClass += ' manual';
+  else if (company.hasNoSystem) cardClass += ' nosystem';
+  return cardClass;
+}
+
+function getCompanyTags(company) {
+  let tags = '';
+  if (company.isCustomer) tags += '<span class="tag tag-client">Cliente</span>';
+  if (company.isExClient) tags += '<span class="tag tag-exclient">Ex-Cliente</span>';
+  if (company.isCompetitor) tags += '<span class="tag tag-competitor">Concorrente</span>';
+  if (company.isVisited) tags += '<span class="tag tag-visited">Visitada</span>';
+  if (company.system && !company.hasNoSystem) tags += `<span class="tag tag-system">⚙️ ${escapeHtml(company.system)}</span>`;
+  if (company.hasNoSystem) tags += '<span class="tag tag-nosystem">❌ Sem Sistema</span>';
+  if (company.isManual) tags += '<span class="tag tag-manual">Manual</span>';
+  if (company.salesContact) tags += `<span class="tag tag-system">👤 ${escapeHtml(company.salesContact)}</span>`;
+  return tags || '<span class="tag">Cadastro salvo</span>';
+}
+
+function companyMatchesFilter(company, status) {
+  if (status === 'all') return true;
+  if (status === 'customer') return company.isCustomer === true;
+  if (status === 'exclient') return company.isExClient === true;
+  if (status === 'competitor') return company.isCompetitor === true;
+  if (status === 'nosystem') return company.hasNoSystem === true;
+  return true;
+}
+
+function renderSavedCompanies(status = currentListFilter) {
+  const listDiv = document.getElementById('company-list');
+  if (!listDiv) return;
+
+  currentListMode = 'saved';
+  currentListFilter = status || 'all';
+
+  const filtered = companiesList
+    .filter(company => companyMatchesFilter(company, currentListFilter))
+    .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'pt-BR'));
+
+  if (!filtered.length) {
+    listDiv.innerHTML = `<div class="empty-state">Nenhuma empresa cadastrada encontrada${currentListFilter !== 'all' ? ' para este filtro' : ''}.</div>`;
+    return;
+  }
+
+  listDiv.innerHTML = '';
+  filtered.forEach(company => {
+    const card = document.createElement('div');
+    card.className = getCompanyCardClass(company);
+    card.innerHTML = `
+      <div class="company-name">${escapeHtml(company.name || 'Empresa sem nome')}</div>
+      <div class="company-addr">${escapeHtml(company.address || 'Endereço não informado')}</div>
+      <div class="company-tags">${getCompanyTags(company)}</div>
+    `;
+    card.onclick = () => {
+      if (map && company.lat && company.lng) {
+        map.setCenter({ lat: Number(company.lat), lng: Number(company.lng) });
+        map.setZoom(16);
+      }
+      openCompanyModal(company);
+    };
+    listDiv.appendChild(card);
+  });
+}
+
 async function searchBusinesses() {
   const searchType = document.querySelector('input[name="searchType"]:checked').value;
   let query = searchType === 'location' ? document.getElementById('search-input').value.trim() : document.getElementById('company-name-input').value.trim();
@@ -665,6 +747,7 @@ async function searchBusinesses() {
 }
 
 function displayResults(results) {
+  currentListMode = 'search';
   const listDiv = document.getElementById('company-list');
   listDiv.innerHTML = '';
   results.forEach(place => {
@@ -1297,17 +1380,24 @@ window.createNewUser = async function() {
 
 // ========== UTILITÁRIOS ==========
 function filterByStatus(status, btn) {
+  currentListFilter = status || 'all';
   document.querySelectorAll('.map-controls .btn-sm').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+  if (btn) btn.classList.add('active');
+
+  if (currentListMode === 'saved') {
+    renderSavedCompanies(currentListFilter);
+    return;
+  }
+
   const cards = document.querySelectorAll('.company-card');
   cards.forEach(card => {
     const text = card.innerText;
     const tags = card.querySelector('.company-tags')?.innerHTML || '';
-    if (status === 'all') card.style.display = 'block';
-    else if (status === 'customer' && (text.includes('Cliente') || tags.includes('Cliente'))) card.style.display = 'block';
-    else if (status === 'exclient' && (text.includes('Ex-Cliente') || tags.includes('Ex-Cliente'))) card.style.display = 'block';
-    else if (status === 'competitor' && (text.includes('Concorrente') || tags.includes('Concorrente'))) card.style.display = 'block';
-    else if (status === 'nosystem' && (text.includes('Sem Sistema') || tags.includes('Sem Sistema'))) card.style.display = 'block';
+    if (currentListFilter === 'all') card.style.display = 'block';
+    else if (currentListFilter === 'customer' && (text.includes('Cliente') || tags.includes('Cliente'))) card.style.display = 'block';
+    else if (currentListFilter === 'exclient' && (text.includes('Ex-Cliente') || tags.includes('Ex-Cliente'))) card.style.display = 'block';
+    else if (currentListFilter === 'competitor' && (text.includes('Concorrente') || tags.includes('Concorrente'))) card.style.display = 'block';
+    else if (currentListFilter === 'nosystem' && (text.includes('Sem Sistema') || tags.includes('Sem Sistema'))) card.style.display = 'block';
     else card.style.display = 'none';
   });
 }
