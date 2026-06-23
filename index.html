@@ -252,6 +252,44 @@
     .map-legend { display: none; }
   }
 
+
+
+  /* Inteligência Comercial e Instagram */
+  .intel-container, .instagram-container { padding: 1rem; overflow-y: auto; height: 100%; }
+  .insight-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; }
+  .insight-card { background:#1a2035; border:1px solid #2d3a5e; border-radius:14px; padding:1rem; }
+  .insight-title { color:#60a5fa; font-size:14px; font-weight:700; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+  .ranking-row { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid #2d3a5e; }
+  .ranking-row:last-child { border-bottom:none; }
+  .ranking-main { min-width:0; }
+  .ranking-name { font-weight:600; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ranking-sub { color:#64748b; font-size:11px; margin-top:3px; }
+  .metric-pill { display:inline-flex; align-items:center; justify-content:center; min-width:34px; padding:4px 9px; border-radius:999px; background:#111520; border:1px solid #2d3a5e; color:#f1f5f9; font-size:12px; font-weight:700; }
+  .priority-high { border-left:4px solid #ef4444; }
+  .priority-medium { border-left:4px solid #f59e0b; }
+  .priority-low { border-left:4px solid #22c55e; }
+  .lead-form-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1rem; }
+  .lead-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
+  .instagram-preview { background:#111520; border:1px dashed #2d3a5e; border-radius:12px; padding:12px; color:#94a3b8; font-size:13px; }
+  .source-instagram { border-left-color:#ec4899 !important; }
+  .tag-instagram { background:rgba(236,72,153,0.18); color:#f472b6; }
+  .tag-segment { background:rgba(14,165,233,0.18); color:#38bdf8; }
+  .tag-priority { background:rgba(245,158,11,0.18); color:#fbbf24; }
+  .quick-kpis { display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:1rem; margin-bottom:1rem; }
+  .kpi-card { background:#111520; border:1px solid #2d3a5e; border-radius:14px; padding:1rem; }
+  .kpi-number { font-size:28px; font-weight:800; }
+  .kpi-label { color:#94a3b8; font-size:12px; margin-top:4px; }
+  .bar-track { height:8px; border-radius:999px; background:#111520; overflow:hidden; margin-top:6px; }
+  .bar-fill { height:100%; background:#3b82f6; border-radius:999px; }
+  .textarea-input { min-height:90px; resize:vertical; }
+  @media (max-width: 768px) {
+    .intel-container, .instagram-container { padding:10px; }
+    .insight-grid { grid-template-columns:1fr; }
+    .quick-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .lead-form-grid { grid-template-columns:1fr; }
+    .lead-actions .btn-primary, .lead-actions .btn-sm { width:100%; padding:12px; border-radius:12px; }
+  }
+
 </style>
 </head>
 <body>
@@ -278,6 +316,8 @@
   <div class="tabs-row">
     <button class="tab-btn active" onclick="switchTab('map',this)">🗺 Mapa</button>
     <button class="tab-btn" onclick="switchTab('market',this)">📊 Market Share</button>
+    <button class="tab-btn" onclick="switchTab('intelligence',this)">🧠 Inteligência</button>
+    <button class="tab-btn" onclick="switchTab('instagram',this)">📸 Instagram</button>
     <button class="tab-btn" onclick="switchTab('reports',this)">📈 Relatórios</button>
     <button class="tab-btn" onclick="switchTab('competitors',this)">⚠️ Concorrentes</button>
     <button class="tab-btn" onclick="switchTab('admin',this)" id="admin-tab-btn" style="display:none">👥 Admin</button>
@@ -328,6 +368,16 @@
     </div>
   </div>
 
+  <!-- INTELIGÊNCIA COMERCIAL -->
+  <div class="tab-content" id="intelligence-tab">
+    <div class="intel-container" id="intelligence-container"></div>
+  </div>
+
+  <!-- LEADS INSTAGRAM -->
+  <div class="tab-content" id="instagram-tab">
+    <div class="instagram-container" id="instagram-container"></div>
+  </div>
+
   <!-- RELATÓRIOS -->
   <div class="tab-content" id="reports-tab">
     <div class="reports-container" id="reports-container"></div>
@@ -362,6 +412,8 @@
       </div>
       
       <div class="section-title">📲 DADOS DE CAMPO</div>
+      <div class="field-group"><div class="field-label">🏷️ Segmento</div><input type="text" id="modal-segment" class="field-input" placeholder="Ex: supermercado, autopeças, restaurante, material de construção"></div>
+      <div class="field-group"><div class="field-label">📸 Instagram</div><input type="text" id="modal-instagram" class="field-input" placeholder="@empresa ou link do perfil"></div>
       <div class="field-group"><div class="field-label">👤 Responsável / Contato</div><input type="text" id="modal-contact" class="field-input" placeholder="Nome da pessoa de contato"></div>
       <div class="field-group"><div class="field-label">📱 Telefone / WhatsApp</div><input type="tel" id="modal-phone" class="field-input" placeholder="(00) 00000-0000"></div>
       <div class="field-group"><div class="field-label">💰 Potencial estimado</div><input type="text" id="modal-potential" class="field-input" placeholder="Ex: 3 caixas, 15 usuários, R$ 900/mês"></div>
@@ -418,6 +470,8 @@
       </div>
       
       <div class="section-title">📲 DADOS DE CAMPO</div>
+      <div class="field-group"><div class="field-label">🏷️ Segmento</div><input type="text" id="manual-segment" class="field-input" placeholder="Ex: supermercado, autopeças, restaurante, material de construção"></div>
+      <div class="field-group"><div class="field-label">📸 Instagram</div><input type="text" id="manual-instagram" class="field-input" placeholder="@empresa ou link do perfil"></div>
       <div class="field-group"><div class="field-label">👤 Responsável / Contato</div><input type="text" id="manual-contact" class="field-input" placeholder="Nome da pessoa de contato"></div>
       <div class="field-group"><div class="field-label">📱 Telefone / WhatsApp</div><input type="tel" id="manual-phone" class="field-input" placeholder="(00) 00000-0000"></div>
       <div class="field-group"><div class="field-label">💰 Potencial estimado</div><input type="text" id="manual-potential" class="field-input" placeholder="Ex: 3 caixas, 15 usuários, R$ 900/mês"></div>
@@ -463,6 +517,10 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+
+// Cole sua chave fixa aqui para não solicitar em cada máquina.
+// Exemplo: const GOOGLE_MAPS_API_KEY = "AIza...";
+const GOOGLE_MAPS_API_KEY = "";
 
 // ========== VARIÁVEIS ==========
 let map, geocoder, markers = [], companiesList = [], currentPlace = null;
@@ -564,6 +622,8 @@ function renderApplicationData(options = {}) {
   }
 
   updateMarketShare();
+  updateIntelligenceDashboard();
+  updateInstagramLeads();
   updateReports();
   updateCompetitorsList();
   lastRenderedCompaniesCount = companiesList.length;
@@ -623,14 +683,28 @@ async function saveCompanyToFirestore(data) {
 function loadGoogleMaps() {
   if (mapsLoaded || mapsLoading) return;
   mapsLoading = true;
-  let key = localStorage.getItem('mm_gkey');
+
+  let key = (GOOGLE_MAPS_API_KEY || '').trim() || localStorage.getItem('mm_gkey');
   if (!key) {
     key = prompt('🔑 Chave da Google Maps API:');
     if (key && key.startsWith('AIza')) localStorage.setItem('mm_gkey', key);
     else { mapsLoading = false; return; }
   }
+
+  if (!key.startsWith('AIza')) {
+    mapsLoading = false;
+    showNotif('Chave do Google Maps inválida.', 'error');
+    return;
+  }
+
+  const existingScript = document.getElementById('google-maps-script');
+  if (existingScript) return;
+
   const script = document.createElement('script');
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places,geometry&callback=initMap`;
+  script.id = 'google-maps-script';
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places,geometry,visualization&callback=initMap`;
+  script.async = true;
+  script.defer = true;
   script.onerror = () => { mapsLoading = false; showNotif('Não foi possível carregar o Google Maps. Confira a chave API.', 'error'); };
   document.head.appendChild(script);
 }
@@ -707,6 +781,7 @@ function getCompanyCardClass(company) {
   if (company.isCustomer) cardClass += ' client';
   else if (company.isExClient) cardClass += ' exclient';
   else if (company.isCompetitor) cardClass += ' competitor';
+  else if (company.leadSource === 'instagram') cardClass += ' source-instagram';
   else if (company.isManual) cardClass += ' manual';
   else if (company.hasNoSystem) cardClass += ' nosystem';
   return cardClass;
@@ -721,7 +796,11 @@ function getCompanyTags(company) {
   if (company.system && !company.hasNoSystem) tags += `<span class="tag tag-system">⚙️ ${escapeHtml(company.system)}</span>`;
   if (company.hasNoSystem) tags += '<span class="tag tag-nosystem">❌ Sem Sistema</span>';
   if (company.isManual) tags += '<span class="tag tag-manual">Manual</span>';
-  if (company.salesContact) tags += `<span class="tag tag-system">👤 ${escapeHtml(company.salesContact)}</span>`;
+  if (company.leadSource === 'instagram') tags += '<span class="tag tag-instagram">📸 Instagram</span>';
+  if (company.segment) tags += `<span class="tag tag-segment">🏷️ ${escapeHtml(company.segment)}</span>`;
+  if (company.instagramHandle) tags += `<span class="tag tag-instagram">@${escapeHtml(company.instagramHandle)}</span>`;
+  if (company.priority) tags += `<span class="tag tag-priority">🔥 ${escapeHtml(company.priority)}</span>`;
+  if (company.contactName) tags += `<span class="tag tag-system">👤 ${escapeHtml(company.contactName)}</span>`;
   return tags || '<span class="tag">Cadastro salvo</span>';
 }
 
@@ -788,7 +867,11 @@ function getCompanySearchBlob(company) {
     company.competitorName,
     company.system,
     company.counter,
-    company.salesContact,
+    company.contactName,
+    company.phone,
+    company.segment,
+    company.instagramHandle,
+    company.instagramUrl,
     loc.city,
     loc.state,
     loc.neighborhood,
@@ -967,12 +1050,12 @@ function renderCombinedSearchResults({ query, savedMatches = [], googleResults =
   `;
 
   if (!savedFiltered.length && !googleOnly.length) {
-    listDiv.insertAdjacentHTML('beforeend', `<div class="empty-state">Nenhuma empresa encontrada para "${escapeHtml(query)}".</div>`);
+    listDiv.innerHTML += `<div class="empty-state">Nenhuma empresa encontrada para "${escapeHtml(query)}".</div>`;
     return;
   }
 
   if (savedFiltered.length) {
-    listDiv.insertAdjacentHTML('beforeend', `<div style="padding:10px 12px;color:#22c55e;font-size:12px;font-weight:700">EMPRESAS JÁ CADASTRADAS NO FIREBASE</div>`);
+    listDiv.innerHTML += `<div style="padding:10px 12px;color:#22c55e;font-size:12px;font-weight:700">EMPRESAS JÁ CADASTRADAS NO FIREBASE</div>`;
     savedFiltered.forEach(company => {
       renderSavedCompanyCard(company, listDiv);
       addCompanyMarker(company);
@@ -980,7 +1063,7 @@ function renderCombinedSearchResults({ query, savedMatches = [], googleResults =
   }
 
   if (googleOnly.length) {
-    listDiv.insertAdjacentHTML('beforeend', `<div style="padding:10px 12px;color:#94a3b8;font-size:12px;font-weight:700">SUGESTÕES DO GOOGLE PARA NOVO CADASTRO</div>`);
+    listDiv.innerHTML += `<div style="padding:10px 12px;color:#94a3b8;font-size:12px;font-weight:700">SUGESTÕES DO GOOGLE PARA NOVO CADASTRO</div>`;
     googleOnly.forEach(place => {
       renderPlaceCard(place, listDiv, null);
       addPlaceMarker(place, null);
@@ -1053,6 +1136,8 @@ function openManualCompanyModal() {
   document.getElementById('manual-lng').value = '';
   document.getElementById('manual-system').value = '';
   document.getElementById('manual-counter').value = '';
+  document.getElementById('manual-segment').value = '';
+  document.getElementById('manual-instagram').value = '';
   document.getElementById('manual-check-customer').checked = false;
   document.getElementById('manual-check-exclient').checked = false;
   document.getElementById('manual-check-competitor').checked = false;
@@ -1124,6 +1209,10 @@ async function saveManualCompany() {
   const isCompetitor = document.getElementById('manual-check-competitor').checked;
   const isVisited = document.getElementById('manual-check-visited').checked;
   const competitorName = document.getElementById('manual-competitor-name').value.trim();
+  const segment = document.getElementById('manual-segment').value.trim();
+  const instagramInput = document.getElementById('manual-instagram').value.trim();
+  const instagramHandle = parseInstagramHandle(instagramInput);
+  const instagramUrl = instagramHandle ? buildInstagramUrl(instagramHandle) : '';
   const contactName = document.getElementById('manual-contact').value.trim();
   const phone = document.getElementById('manual-phone').value.trim();
   const potential = document.getElementById('manual-potential').value.trim();
@@ -1186,6 +1275,10 @@ async function saveManualCompany() {
     isCompetitor: isCompetitor,
     isVisited: isVisited,
     competitorName: isCompetitor ? competitorName : null,
+    segment: segment || null,
+    instagramHandle: instagramHandle || null,
+    instagramUrl: instagramUrl || null,
+    leadSource: instagramHandle ? 'instagram' : 'manual',
     contactName: contactName || null,
     phone: phone || null,
     potential: potential || null,
@@ -1199,6 +1292,293 @@ async function saveManualCompany() {
   };
   
   await saveCompanyToFirestore(companyData);
+}
+
+
+// ========== INTELIGÊNCIA COMERCIAL / INSTAGRAM ==========
+function parseInstagramHandle(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const withoutQuery = raw.split('?')[0].split('#')[0].trim();
+  const matchUrl = withoutQuery.match(/instagram\.com\/([A-Za-z0-9._]+)/i);
+  let handle = matchUrl ? matchUrl[1] : withoutQuery.replace(/^@/, '');
+  handle = handle.replace(/[^A-Za-z0-9._]/g, '').replace(/\.+$/g, '');
+  if (!handle || ['p','reel','reels','stories','explore','accounts'].includes(handle.toLowerCase())) return '';
+  return handle.toLowerCase();
+}
+
+function buildInstagramUrl(handle) {
+  const clean = parseInstagramHandle(handle);
+  return clean ? `https://www.instagram.com/${clean}/` : '';
+}
+
+function getCompanyCity(company) {
+  return extractLocationDetails(company.address || '').city || company.city || 'Local não informado';
+}
+
+function getCompanyState(company) {
+  return extractLocationDetails(company.address || '').state || company.state || '';
+}
+
+function countBy(list, getter) {
+  return list.reduce((acc, item) => {
+    const key = getter(item) || 'Não informado';
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+}
+
+function sortedEntries(obj, limit = 8) {
+  return Object.entries(obj).sort((a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0]), 'pt-BR')).slice(0, limit);
+}
+
+function getPriority(company) {
+  const text = normalizeSearchText([company.potential, company.notes, company.nextAction, company.segment].filter(Boolean).join(' '));
+  if (company.priority) return company.priority;
+  if (/alto|grande|urgente|proposta|demo|demonstra|fechamento|quente|r\s?\$|[5-9]\s?caixas|10\s?usuarios/.test(text)) return 'Alta';
+  if (/medio|m[eé]dio|retorno|avaliar|visita|interesse|caixa|usuarios/.test(text)) return 'Média';
+  return 'Baixa';
+}
+
+function priorityClass(company) {
+  const p = getPriority(company);
+  if (p === 'Alta') return 'priority-high';
+  if (p === 'Média') return 'priority-medium';
+  return 'priority-low';
+}
+
+function isUpcoming(company) {
+  if (!company.nextActionDate) return false;
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const d = new Date(company.nextActionDate + 'T00:00:00');
+  const diff = (d - today) / 86400000;
+  return diff >= 0 && diff <= 7;
+}
+
+function renderRankingList(entries, emptyMessage = 'Sem dados suficientes ainda.') {
+  if (!entries.length) return `<div class="empty-state">${emptyMessage}</div>`;
+  const max = Math.max(...entries.map(e => e[1]), 1);
+  return entries.map(([name, count]) => `
+    <div class="ranking-row">
+      <div class="ranking-main">
+        <div class="ranking-name">${escapeHtml(name)}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.max(8, (count / max) * 100)}%"></div></div>
+      </div>
+      <span class="metric-pill">${count}</span>
+    </div>
+  `).join('');
+}
+
+function renderCompanyActionRows(list, emptyMessage = 'Nenhuma ação pendente encontrada.') {
+  if (!list.length) return `<div class="empty-state">${emptyMessage}</div>`;
+  return list.slice(0, 10).map(c => `
+    <div class="company-row ${priorityClass(c)}" onclick='openCompanyModal(${JSON.stringify(c).replace(/'/g, "\\'")})'>
+      <div>
+        <span style="font-weight:600">${escapeHtml(c.name || 'Empresa sem nome')}</span><br>
+        <span style="font-size:11px;color:#94a3b8">${escapeHtml(c.nextAction || 'Definir próxima ação')} ${c.nextActionDate ? ' • ' + escapeHtml(c.nextActionDate) : ''}</span><br>
+        <span style="font-size:11px;color:#64748b">${escapeHtml(getCompanyCity(c))}${c.segment ? ' • ' + escapeHtml(c.segment) : ''}</span>
+      </div>
+      <div><span class="badge badge-location">${escapeHtml(getPriority(c))}</span></div>
+    </div>
+  `).join('');
+}
+
+function updateIntelligenceDashboard() {
+  const container = document.getElementById('intelligence-container');
+  if (!container) return;
+
+  const total = companiesList.length;
+  const clients = companiesList.filter(c => c.isCustomer === true);
+  const competitors = companiesList.filter(c => c.isCompetitor === true);
+  const noSystem = companiesList.filter(c => c.hasNoSystem === true);
+  const instagram = companiesList.filter(c => c.leadSource === 'instagram' || c.instagramHandle);
+  const highPriority = companiesList.filter(c => getPriority(c) === 'Alta');
+  const upcoming = companiesList.filter(isUpcoming).sort((a,b) => String(a.nextActionDate || '').localeCompare(String(b.nextActionDate || '')));
+  const withoutNextAction = companiesList.filter(c => !c.nextAction && !c.nextActionDate && !c.isCustomer);
+  const byCity = sortedEntries(countBy(companiesList, getCompanyCity), 8);
+  const byCompetitor = sortedEntries(countBy(competitors, c => c.competitorName || 'Concorrente não informado'), 8);
+  const bySegment = sortedEntries(countBy(companiesList.filter(c => c.segment), c => c.segment), 8);
+  const byConsultor = sortedEntries(countBy(companiesList.filter(c => c.capturedBy), c => c.capturedBy), 8);
+  const hotList = companiesList.filter(c => getPriority(c) === 'Alta' && !c.isCustomer).sort((a,b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
+
+  container.innerHTML = `
+    <div class="quick-kpis">
+      <div class="kpi-card"><div class="kpi-number">${total}</div><div class="kpi-label">Empresas mapeadas</div></div>
+      <div class="kpi-card"><div class="kpi-number" style="color:#22c55e">${clients.length}</div><div class="kpi-label">Clientes</div></div>
+      <div class="kpi-card"><div class="kpi-number" style="color:#ef4444">${competitors.length}</div><div class="kpi-label">Clientes da concorrência</div></div>
+      <div class="kpi-card"><div class="kpi-number" style="color:#94a3b8">${noSystem.length}</div><div class="kpi-label">Sem sistema</div></div>
+      <div class="kpi-card"><div class="kpi-number" style="color:#f472b6">${instagram.length}</div><div class="kpi-label">Leads com Instagram</div></div>
+      <div class="kpi-card"><div class="kpi-number" style="color:#f59e0b">${highPriority.length}</div><div class="kpi-label">Oportunidades quentes</div></div>
+    </div>
+
+    <div class="insight-grid">
+      <div class="insight-card"><div class="insight-title">🔥 Oportunidades prioritárias</div>${renderCompanyActionRows(hotList, 'Ainda não há oportunidades marcadas como quentes.')}</div>
+      <div class="insight-card"><div class="insight-title">📅 Próximas ações — 7 dias</div>${renderCompanyActionRows(upcoming, 'Nenhuma próxima ação nos próximos 7 dias.')}</div>
+      <div class="insight-card"><div class="insight-title">🏆 Ranking de concorrentes</div>${renderRankingList(byCompetitor, 'Nenhum concorrente mapeado ainda.')}</div>
+      <div class="insight-card"><div class="insight-title">🏙️ Cidades com mais cadastros</div>${renderRankingList(byCity, 'Nenhuma cidade identificada ainda.')}</div>
+      <div class="insight-card"><div class="insight-title">🏷️ Segmentos mais mapeados</div>${renderRankingList(bySegment, 'Informe segmentos nos cadastros para gerar leitura de mercado.')}</div>
+      <div class="insight-card"><div class="insight-title">👥 Produção por consultor</div>${renderRankingList(byConsultor, 'Os próximos cadastros passarão a registrar o usuário captador.')}</div>
+      <div class="insight-card"><div class="insight-title">⚠️ Sem próxima ação</div>${renderCompanyActionRows(withoutNextAction, 'Tudo com encaminhamento definido. Bonito de ver!')}</div>
+    </div>
+  `;
+}
+
+function updateInstagramLeads() {
+  const container = document.getElementById('instagram-container');
+  if (!container) return;
+  const instagramLeads = companiesList
+    .filter(c => c.leadSource === 'instagram' || c.instagramHandle)
+    .sort((a,b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')));
+
+  container.innerHTML = `
+    <div class="report-card">
+      <div class="report-title">📸 Captação assistida pelo Instagram</div>
+      <div style="color:#94a3b8;font-size:13px;line-height:1.5;margin-bottom:1rem">
+        Cole o @ ou o link do perfil encontrado pelo consultor. O MarketMap transforma em lead, salva na mesma coleção <strong>companies</strong> e deixa pronto para pesquisa, próxima ação e análise comercial.
+      </div>
+      <div class="lead-form-grid">
+        <div class="field-group"><div class="field-label">📸 @ ou link do Instagram *</div><input type="text" id="ig-input" class="field-input" placeholder="@empresa ou https://instagram.com/empresa" oninput="previewInstagramLead()"></div>
+        <div class="field-group"><div class="field-label">🏢 Nome da empresa</div><input type="text" id="ig-company-name" class="field-input" placeholder="Nome comercial"></div>
+        <div class="field-group"><div class="field-label">🏷️ Segmento</div><input type="text" id="ig-segment" class="field-input" placeholder="Ex: supermercado, restaurante, autopeças"></div>
+        <div class="field-group"><div class="field-label">📍 Cidade/UF ou endereço</div><input type="text" id="ig-address" class="field-input" placeholder="Ex: Araguaína - TO"></div>
+        <div class="field-group"><div class="field-label">📱 WhatsApp/telefone</div><input type="tel" id="ig-phone" class="field-input" placeholder="(00) 00000-0000"></div>
+        <div class="field-group"><div class="field-label">🔥 Prioridade</div><select id="ig-priority" class="field-input"><option>Alta</option><option selected>Média</option><option>Baixa</option></select></div>
+        <div class="field-group"><div class="field-label">🎯 Próxima ação</div><input type="text" id="ig-next-action" class="field-input" placeholder="Ex: chamar no WhatsApp, visitar, qualificar"></div>
+        <div class="field-group"><div class="field-label">📅 Data da próxima ação</div><input type="date" id="ig-next-date" class="field-input"></div>
+      </div>
+      <div class="field-group"><div class="field-label">📝 Observações</div><textarea id="ig-notes" class="field-input textarea-input" placeholder="Bio, sinais de oportunidade, concorrente percebido, dores, produtos vistos no perfil..."></textarea></div>
+      <div id="ig-preview" class="instagram-preview">Cole um @ para gerar a prévia do lead.</div>
+      <div class="lead-actions">
+        <button class="btn-primary" style="width:auto" onclick="saveInstagramLead()">💾 Salvar lead Instagram</button>
+        <button class="btn-sm" onclick="openInstagramProfileFromInput()">🔗 Abrir perfil</button>
+        <button class="btn-sm" onclick="searchInstagramLeadInMap()">🔎 Pesquisar na base</button>
+      </div>
+    </div>
+
+    <div class="report-card">
+      <div class="report-title">📋 Leads vindos/relacionados ao Instagram</div>
+      ${instagramLeads.length ? instagramLeads.map(c => `
+        <div class="company-row source-instagram" onclick='openCompanyModal(${JSON.stringify(c).replace(/'/g, "\\'")})'>
+          <div>
+            <span style="font-weight:600">${escapeHtml(c.name || '@' + c.instagramHandle)}</span><br>
+            <span style="font-size:11px;color:#f472b6">${c.instagramHandle ? '@' + escapeHtml(c.instagramHandle) : 'Instagram informado'}</span>
+            <span style="font-size:11px;color:#64748b"> • ${escapeHtml(getCompanyCity(c))}${c.segment ? ' • ' + escapeHtml(c.segment) : ''}</span>
+          </div>
+          <div><span class="badge badge-location">${escapeHtml(getPriority(c))}</span></div>
+        </div>
+      `).join('') : '<div class="empty-state">Nenhum lead Instagram salvo ainda.</div>'}
+    </div>
+  `;
+}
+
+function previewInstagramLead() {
+  const input = document.getElementById('ig-input')?.value || '';
+  const handle = parseInstagramHandle(input);
+  const preview = document.getElementById('ig-preview');
+  if (!preview) return;
+  if (!handle) {
+    preview.innerHTML = 'Cole um @ válido para gerar a prévia do lead.';
+    return;
+  }
+  preview.innerHTML = `Perfil identificado: <strong>@${escapeHtml(handle)}</strong><br>URL: ${escapeHtml(buildInstagramUrl(handle))}`;
+  const nameInput = document.getElementById('ig-company-name');
+  if (nameInput && !nameInput.value.trim()) {
+    nameInput.value = handle.replace(/[._]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+}
+
+function openInstagramProfileFromInput() {
+  const handle = parseInstagramHandle(document.getElementById('ig-input')?.value || '');
+  if (!handle) { showNotif('Informe um @ válido do Instagram', 'error'); return; }
+  window.open(buildInstagramUrl(handle), '_blank', 'noopener');
+}
+
+function searchInstagramLeadInMap() {
+  const handle = parseInstagramHandle(document.getElementById('ig-input')?.value || '');
+  const name = document.getElementById('ig-company-name')?.value || '';
+  const q = handle || name;
+  if (!q) { showNotif('Informe o @ ou nome da empresa', 'error'); return; }
+  switchTab('map', document.querySelector('.tab-btn[onclick*="map"]'));
+  const companyRadio = document.querySelector('input[name="searchType"][value="company"]');
+  if (companyRadio) companyRadio.checked = true;
+  setupEventListeners();
+  const companyInput = document.getElementById('company-name-input');
+  const locationInput = document.getElementById('search-input');
+  if (companyInput) { companyInput.style.display = 'block'; companyInput.value = q; }
+  if (locationInput) locationInput.style.display = 'none';
+  searchBusinesses();
+}
+
+async function saveInstagramLead() {
+  const input = document.getElementById('ig-input')?.value.trim() || '';
+  const handle = parseInstagramHandle(input);
+  if (!handle) { showNotif('Informe um @ ou link válido do Instagram', 'error'); return; }
+
+  const name = document.getElementById('ig-company-name')?.value.trim() || handle;
+  const segment = document.getElementById('ig-segment')?.value.trim() || '';
+  const address = document.getElementById('ig-address')?.value.trim() || '';
+  const phone = document.getElementById('ig-phone')?.value.trim() || '';
+  const priority = document.getElementById('ig-priority')?.value || 'Média';
+  const nextAction = document.getElementById('ig-next-action')?.value.trim() || 'Qualificar lead do Instagram';
+  const nextActionDate = document.getElementById('ig-next-date')?.value || null;
+  const notes = document.getElementById('ig-notes')?.value.trim() || '';
+
+  let lat = null, lng = null;
+  if (address && geocoder) {
+    try {
+      const result = await new Promise((resolve, reject) => {
+        geocoder.geocode({ address: address + ', Brasil' }, (results, status) => {
+          if (status === 'OK' && results[0]) resolve(results[0].geometry.location);
+          else reject(new Error('Endereço não localizado'));
+        });
+      });
+      lat = result.lat();
+      lng = result.lng();
+    } catch (error) {
+      console.warn('Instagram lead sem coordenadas:', error.message);
+    }
+  }
+
+  const existing = companiesList.find(c => c.instagramHandle === handle);
+  const leadData = {
+    placeId: existing?.placeId || `instagram_${handle}`,
+    name,
+    address: address || existing?.address || 'Origem Instagram - endereço a confirmar',
+    lat: lat ?? existing?.lat ?? null,
+    lng: lng ?? existing?.lng ?? null,
+    segment: segment || existing?.segment || null,
+    instagramHandle: handle,
+    instagramUrl: buildInstagramUrl(handle),
+    leadSource: 'instagram',
+    phone: phone || existing?.phone || null,
+    priority,
+    nextAction,
+    nextActionDate,
+    notes: notes || existing?.notes || null,
+    isCustomer: existing?.isCustomer || false,
+    isExClient: existing?.isExClient || false,
+    isCompetitor: existing?.isCompetitor || false,
+    isVisited: existing?.isVisited || false,
+    hasNoSystem: existing?.hasNoSystem || false,
+    capturedBy: auth.currentUser ? auth.currentUser.email : null,
+    updatedAt: new Date().toISOString(),
+    createdAt: existing?.createdAt || new Date().toISOString()
+  };
+
+  if (existing?.id) {
+    await db.collection('companies').doc(existing.id).update(leadData);
+    showNotif('✅ Lead Instagram atualizado!', 'success');
+  } else {
+    const newId = `ig_${Date.now()}`;
+    leadData.id = newId;
+    await db.collection('companies').doc(newId).set(leadData);
+    showNotif('✅ Lead Instagram salvo!', 'success');
+  }
+
+  await loadCompanies();
+  updateInstagramLeads();
+  updateIntelligenceDashboard();
 }
 
 // ========== MARKET SHARE ==========
@@ -1467,6 +1847,8 @@ function openModalFromPlace(place) {
   document.getElementById('check-competitor').checked = existing?.isCompetitor || false;
   document.getElementById('check-visited').checked = existing?.isVisited || false;
   document.getElementById('modal-competitor-name').value = existing?.competitorName || '';
+  document.getElementById('modal-segment').value = existing?.segment || '';
+  document.getElementById('modal-instagram').value = existing?.instagramHandle ? '@' + existing.instagramHandle : (existing?.instagramUrl || '');
   document.getElementById('modal-contact').value = existing?.contactName || '';
   document.getElementById('modal-phone').value = existing?.phone || '';
   document.getElementById('modal-potential').value = existing?.potential || '';
@@ -1508,6 +1890,8 @@ function openCompanyModal(company) {
   document.getElementById('check-competitor').checked = company.isCompetitor || false;
   document.getElementById('check-visited').checked = company.isVisited || false;
   document.getElementById('modal-competitor-name').value = company.competitorName || '';
+  document.getElementById('modal-segment').value = company.segment || '';
+  document.getElementById('modal-instagram').value = company.instagramHandle ? '@' + company.instagramHandle : (company.instagramUrl || '');
   document.getElementById('modal-contact').value = company.contactName || '';
   document.getElementById('modal-phone').value = company.phone || '';
   document.getElementById('modal-potential').value = company.potential || '';
@@ -1559,6 +1943,10 @@ async function saveCompany() {
   const isCompetitor = document.getElementById('check-competitor').checked;
   const isVisited = document.getElementById('check-visited').checked;
   const competitorName = document.getElementById('modal-competitor-name').value.trim();
+  const segment = document.getElementById('modal-segment').value.trim();
+  const instagramInput = document.getElementById('modal-instagram').value.trim();
+  const instagramHandle = parseInstagramHandle(instagramInput);
+  const instagramUrl = instagramHandle ? buildInstagramUrl(instagramHandle) : '';
   const contactName = document.getElementById('modal-contact').value.trim();
   const phone = document.getElementById('modal-phone').value.trim();
   const potential = document.getElementById('modal-potential').value.trim();
@@ -1590,6 +1978,10 @@ async function saveCompany() {
     isCompetitor: isCompetitor,
     isVisited: isVisited,
     competitorName: isCompetitor ? competitorName : null,
+    segment: segment || null,
+    instagramHandle: instagramHandle || null,
+    instagramUrl: instagramUrl || null,
+    leadSource: instagramHandle ? 'instagram' : (currentPlace ? 'google' : 'manual'),
     contactName: contactName || null,
     phone: phone || null,
     potential: potential || null,
@@ -1672,6 +2064,8 @@ function switchTab(tab, btn) {
   btn.classList.add('active');
   document.getElementById(tab + '-tab').classList.add('active');
   if (tab === 'market') updateMarketShare();
+  if (tab === 'intelligence') updateIntelligenceDashboard();
+  if (tab === 'instagram') updateInstagramLeads();
   if (tab === 'reports') updateReports();
   if (tab === 'competitors') updateCompetitorsList();
   if (tab === 'admin' && currentUserRole === 'diretor') loadAdminPanel();

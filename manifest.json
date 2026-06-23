@@ -1,7 +1,7 @@
 {
-  "name": "MarketMap — Inteligência Comercial",
+  "name": "MarketMap — Inteligência Comercial e Instagram",
   "short_name": "MarketMap",
-  "description": "Mapeamento de clientes, concorrentes e oportunidades em campo.",
+  "description": "Mapeamento de market share, inteligência comercial, leads Instagram e apoio ao consultor em campo.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
