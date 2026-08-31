@@ -271,6 +271,16 @@
   .lead-form-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1rem; }
   .lead-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
   .instagram-preview { background:#111520; border:1px dashed #2d3a5e; border-radius:12px; padding:12px; color:#94a3b8; font-size:13px; }
+  .instagram-api-status { margin-top:8px; padding:10px 12px; background:#0b0d13; border:1px solid #2d3a5e; border-radius:10px; color:#94a3b8; font-size:12px; line-height:1.45; }
+  .instagram-api-status.ok { border-color:#22c55e; color:#bbf7d0; }
+  .instagram-api-status.warn { border-color:#f59e0b; color:#fde68a; }
+  .instagram-api-status.error { border-color:#ef4444; color:#fecaca; }
+  .ig-profile-card { display:flex; gap:12px; align-items:flex-start; background:#0b0d13; border:1px solid #2d3a5e; border-radius:12px; padding:12px; margin-top:10px; }
+  .ig-profile-photo { width:58px; height:58px; border-radius:50%; object-fit:cover; background:#111520; flex:0 0 58px; }
+  .ig-profile-meta { color:#94a3b8; font-size:12px; line-height:1.45; }
+  .ig-profile-meta strong { color:#f8fafc; font-size:14px; }
+  .ig-profile-kpis { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .ig-profile-kpis span { background:rgba(236,72,153,0.14); color:#f472b6; border-radius:999px; padding:3px 8px; font-size:11px; }
   .source-instagram { border-left-color:#ec4899 !important; }
   .tag-instagram { background:rgba(236,72,153,0.18); color:#f472b6; }
   .tag-segment { background:rgba(14,165,233,0.18); color:#38bdf8; }
@@ -520,7 +530,13 @@ const db = firebase.firestore();
 
 // Cole sua chave fixa aqui para não solicitar em cada máquina.
 // Exemplo: const GOOGLE_MAPS_API_KEY = "AIza...";
-const GOOGLE_MAPS_API_KEY = "AIzaSyAVvWl7gvSMY05qqT4Nhy99k82ddJSB7ZA";
+const GOOGLE_MAPS_API_KEY = "";
+
+// Backend Cloudflare Worker para integração oficial com Instagram/Meta.
+// 1) Cole aqui a URL gerada no Cloudflare, exemplo: "https://marketmap-instagram-api.seunome.workers.dev"
+// 2) A chave abaixo deve ser igual ao Secret MARKETMAP_API_KEY cadastrado no Worker.
+const INSTAGRAM_BACKEND_BASE_URL = "";
+const MARKETMAP_API_KEY = "MktMap_Instagram_2026_Seguro";
 
 // ========== VARIÁVEIS ==========
 let map, geocoder, markers = [], companiesList = [], currentPlace = null;
@@ -533,6 +549,7 @@ let lastRenderedCompaniesCount = -1;
 let currentUser = null, currentUserRole = 'consultor';
 let placesService = null;
 let currentEditId = null;
+let lastInstagramApiProfile = null;
 
 const brazilStates = {
   'SP':'São Paulo','RJ':'Rio de Janeiro','MG':'Minas Gerais','RS':'Rio Grande do Sul','PR':'Paraná','SC':'Santa Catarina',
@@ -1312,6 +1329,137 @@ function buildInstagramUrl(handle) {
   return clean ? `https://www.instagram.com/${clean}/` : '';
 }
 
+function isInstagramBackendConfigured() {
+  const baseUrl = String(INSTAGRAM_BACKEND_BASE_URL || '').trim();
+  return Boolean(baseUrl && !baseUrl.includes('COLE') && !baseUrl.includes('SEU-WORKER'));
+}
+
+function getInstagramBackendBaseUrl() {
+  return String(INSTAGRAM_BACKEND_BASE_URL || '').trim().replace(/\/+$/g, '');
+}
+
+async function callInstagramBackend(path, params = {}) {
+  if (!isInstagramBackendConfigured()) {
+    throw new Error('Backend do Instagram não configurado. Cole a URL do Cloudflare Worker em INSTAGRAM_BACKEND_BASE_URL.');
+  }
+
+  const url = new URL(getInstagramBackendBaseUrl() + path);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, value);
+  });
+
+  const headers = { 'Accept': 'application/json' };
+  if (MARKETMAP_API_KEY) headers['X-MarketMap-Key'] = MARKETMAP_API_KEY;
+  if (auth.currentUser) {
+    try {
+      headers['Authorization'] = 'Bearer ' + await auth.currentUser.getIdToken();
+    } catch (error) {
+      console.warn('Não foi possível obter token Firebase para o Worker:', error.message);
+    }
+  }
+
+  const response = await fetch(url.toString(), { method: 'GET', headers });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data.ok === false) {
+    const message = data?.error?.message || data?.error || `Erro HTTP ${response.status} ao consultar Instagram.`;
+    throw new Error(typeof message === 'string' ? message : JSON.stringify(message));
+  }
+  return data;
+}
+
+function formatNumberBr(value) {
+  const n = Number(value || 0);
+  if (!Number.isFinite(n)) return '0';
+  return n.toLocaleString('pt-BR');
+}
+
+function appendUniqueNote(current, extra) {
+  const base = String(current || '').trim();
+  const add = String(extra || '').trim();
+  if (!add) return base;
+  if (base.includes(add)) return base;
+  return base ? `${base}\n\n${add}` : add;
+}
+
+function renderInstagramApiProfile(profile) {
+  if (!profile) return '';
+  const photo = profile.profile_picture_url ? `<img class="ig-profile-photo" src="${escapeHtml(profile.profile_picture_url)}" alt="Foto do perfil">` : `<div class="ig-profile-photo"></div>`;
+  const website = profile.website ? `<br>🌐 ${escapeHtml(profile.website)}` : '';
+  const bio = profile.biography ? `<br>📝 ${escapeHtml(profile.biography).slice(0, 220)}${profile.biography.length > 220 ? '...' : ''}` : '';
+  return `
+    <div class="ig-profile-card">
+      ${photo}
+      <div class="ig-profile-meta">
+        <strong>${escapeHtml(profile.name || profile.username || 'Perfil Instagram')}</strong><br>
+        @${escapeHtml(profile.username || '')}${website}${bio}
+        <div class="ig-profile-kpis">
+          <span>${formatNumberBr(profile.followers_count)} seguidores</span>
+          <span>${formatNumberBr(profile.media_count)} posts</span>
+          <span>${formatNumberBr(profile.follows_count)} seguindo</span>
+        </div>
+      </div>
+    </div>`;
+}
+
+function applyInstagramProfileToForm(profile) {
+  if (!profile) return;
+  const handle = parseInstagramHandle(profile.username || '');
+  const nameInput = document.getElementById('ig-company-name');
+  const notesInput = document.getElementById('ig-notes');
+  const igInput = document.getElementById('ig-input');
+
+  if (igInput && handle) igInput.value = '@' + handle;
+  if (nameInput && (!nameInput.value.trim() || nameInput.value.trim() === handle)) {
+    nameInput.value = profile.name || handle;
+  }
+
+  if (notesInput) {
+    const parts = [];
+    parts.push(`Dados puxados do Instagram em ${new Date().toLocaleString('pt-BR')}: @${profile.username || handle}`);
+    if (profile.biography) parts.push(`Bio: ${profile.biography}`);
+    if (profile.website) parts.push(`Site informado: ${profile.website}`);
+    if (profile.followers_count !== undefined) parts.push(`Seguidores: ${formatNumberBr(profile.followers_count)}`);
+    if (profile.media_count !== undefined) parts.push(`Quantidade de posts: ${formatNumberBr(profile.media_count)}`);
+    notesInput.value = appendUniqueNote(notesInput.value, parts.join('\n'));
+  }
+}
+
+async function fetchInstagramProfileFromApi() {
+  const input = document.getElementById('ig-input')?.value || '';
+  const handle = parseInstagramHandle(input);
+  const status = document.getElementById('ig-api-status');
+  const preview = document.getElementById('ig-preview');
+  if (!handle) { showNotif('Informe um @ ou link válido do Instagram', 'error'); return; }
+
+  if (status) {
+    status.className = 'instagram-api-status warn';
+    status.innerHTML = 'Consultando Instagram pela API do Cloudflare Worker...';
+  }
+
+  try {
+    const data = await callInstagramBackend('/instagram/profile', { username: handle });
+    const profile = data.profile || data.business_discovery || data.data?.business_discovery || null;
+    if (!profile) throw new Error('A API respondeu, mas não retornou dados do perfil. Verifique se o perfil é profissional Business/Creator e se as permissões da Meta estão corretas.');
+
+    lastInstagramApiProfile = profile;
+    applyInstagramProfileToForm(profile);
+    if (preview) preview.innerHTML = renderInstagramApiProfile(profile);
+    if (status) {
+      status.className = 'instagram-api-status ok';
+      status.innerHTML = '✅ Dados do Instagram carregados. Revise as informações e clique em salvar lead.';
+    }
+    showNotif('✅ Perfil carregado do Instagram!', 'success');
+  } catch (error) {
+    console.error('Erro Instagram API:', error);
+    lastInstagramApiProfile = null;
+    if (status) {
+      status.className = 'instagram-api-status error';
+      status.innerHTML = `⚠️ ${escapeHtml(error.message)}<br><br>Você ainda pode salvar o lead manualmente com @/link.`;
+    }
+    showNotif('Não foi possível buscar o perfil pela API.', 'error');
+  }
+}
+
 function getCompanyCity(company) {
   return extractLocationDetails(company.address || '').city || company.city || 'Local não informado';
 }
@@ -1431,13 +1579,19 @@ function updateInstagramLeads() {
     .filter(c => c.leadSource === 'instagram' || c.instagramHandle)
     .sort((a,b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')));
 
+  const apiStatusClass = isInstagramBackendConfigured() ? 'instagram-api-status ok' : 'instagram-api-status warn';
+  const apiStatusText = isInstagramBackendConfigured()
+    ? '✅ Backend Cloudflare configurado. Você pode puxar dados do perfil pela API oficial da Meta/Instagram.'
+    : '⚠️ Backend Cloudflare ainda não configurado. Cole a URL do Worker em INSTAGRAM_BACKEND_BASE_URL no index.html. Enquanto isso, o cadastro manual por @ continua funcionando.';
+
   container.innerHTML = `
     <div class="report-card">
-      <div class="report-title">📸 Captação assistida pelo Instagram</div>
+      <div class="report-title">📸 Instagram integrado ao MarketMap</div>
       <div style="color:#94a3b8;font-size:13px;line-height:1.5;margin-bottom:1rem">
-        Cole o @ ou o link do perfil encontrado pelo consultor. O MarketMap transforma em lead, salva na mesma coleção <strong>companies</strong> e deixa pronto para pesquisa, próxima ação e análise comercial.
+        Cole o @ ou o link do perfil. Com o Cloudflare Worker configurado, o MarketMap consulta a API oficial, puxa dados do perfil e transforma tudo em lead dentro da coleção <strong>companies</strong>.
       </div>
-      <div class="lead-form-grid">
+      <div id="ig-api-status" class="${apiStatusClass}">${apiStatusText}</div>
+      <div class="lead-form-grid" style="margin-top:1rem">
         <div class="field-group"><div class="field-label">📸 @ ou link do Instagram *</div><input type="text" id="ig-input" class="field-input" placeholder="@empresa ou https://instagram.com/empresa" oninput="previewInstagramLead()"></div>
         <div class="field-group"><div class="field-label">🏢 Nome da empresa</div><input type="text" id="ig-company-name" class="field-input" placeholder="Nome comercial"></div>
         <div class="field-group"><div class="field-label">🏷️ Segmento</div><input type="text" id="ig-segment" class="field-input" placeholder="Ex: supermercado, restaurante, autopeças"></div>
@@ -1450,6 +1604,7 @@ function updateInstagramLeads() {
       <div class="field-group"><div class="field-label">📝 Observações</div><textarea id="ig-notes" class="field-input textarea-input" placeholder="Bio, sinais de oportunidade, concorrente percebido, dores, produtos vistos no perfil..."></textarea></div>
       <div id="ig-preview" class="instagram-preview">Cole um @ para gerar a prévia do lead.</div>
       <div class="lead-actions">
+        <button class="btn-primary" style="width:auto;background:#ec4899" onclick="fetchInstagramProfileFromApi()">⚡ Buscar dados do Instagram</button>
         <button class="btn-primary" style="width:auto" onclick="saveInstagramLead()">💾 Salvar lead Instagram</button>
         <button class="btn-sm" onclick="openInstagramProfileFromInput()">🔗 Abrir perfil</button>
         <button class="btn-sm" onclick="searchInstagramLeadInMap()">🔎 Pesquisar na base</button>
@@ -1464,6 +1619,7 @@ function updateInstagramLeads() {
             <span style="font-weight:600">${escapeHtml(c.name || '@' + c.instagramHandle)}</span><br>
             <span style="font-size:11px;color:#f472b6">${c.instagramHandle ? '@' + escapeHtml(c.instagramHandle) : 'Instagram informado'}</span>
             <span style="font-size:11px;color:#64748b"> • ${escapeHtml(getCompanyCity(c))}${c.segment ? ' • ' + escapeHtml(c.segment) : ''}</span>
+            ${c.instagramFollowers ? `<br><span style="font-size:11px;color:#94a3b8">${formatNumberBr(c.instagramFollowers)} seguidores${c.instagramWebsite ? ' • ' + escapeHtml(c.instagramWebsite) : ''}</span>` : ''}
           </div>
           <div><span class="badge badge-location">${escapeHtml(getPriority(c))}</span></div>
         </div>
@@ -1476,12 +1632,13 @@ function previewInstagramLead() {
   const input = document.getElementById('ig-input')?.value || '';
   const handle = parseInstagramHandle(input);
   const preview = document.getElementById('ig-preview');
+  lastInstagramApiProfile = null;
   if (!preview) return;
   if (!handle) {
     preview.innerHTML = 'Cole um @ válido para gerar a prévia do lead.';
     return;
   }
-  preview.innerHTML = `Perfil identificado: <strong>@${escapeHtml(handle)}</strong><br>URL: ${escapeHtml(buildInstagramUrl(handle))}`;
+  preview.innerHTML = `Perfil identificado: <strong>@${escapeHtml(handle)}</strong><br>URL: ${escapeHtml(buildInstagramUrl(handle))}<br><br><span style="color:#f472b6">Para preencher dados automaticamente, clique em “Buscar dados do Instagram”.</span>`;
   const nameInput = document.getElementById('ig-company-name');
   if (nameInput && !nameInput.value.trim()) {
     nameInput.value = handle.replace(/[._]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -1550,6 +1707,14 @@ async function saveInstagramLead() {
     segment: segment || existing?.segment || null,
     instagramHandle: handle,
     instagramUrl: buildInstagramUrl(handle),
+    instagramFollowers: lastInstagramApiProfile?.followers_count ?? existing?.instagramFollowers ?? null,
+    instagramFollowing: lastInstagramApiProfile?.follows_count ?? existing?.instagramFollowing ?? null,
+    instagramMediaCount: lastInstagramApiProfile?.media_count ?? existing?.instagramMediaCount ?? null,
+    instagramWebsite: lastInstagramApiProfile?.website || existing?.instagramWebsite || null,
+    instagramBiography: lastInstagramApiProfile?.biography || existing?.instagramBiography || null,
+    instagramProfilePicture: lastInstagramApiProfile?.profile_picture_url || existing?.instagramProfilePicture || null,
+    instagramApiRaw: lastInstagramApiProfile || existing?.instagramApiRaw || null,
+    instagramFetchedAt: lastInstagramApiProfile ? new Date().toISOString() : (existing?.instagramFetchedAt || null),
     leadSource: 'instagram',
     phone: phone || existing?.phone || null,
     priority,
