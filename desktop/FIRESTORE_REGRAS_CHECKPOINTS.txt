@@ -1,0 +1,21 @@
+Se suas regras do Firestore já liberam leitura/escrita para usuários autenticados em todas as coleções, não precisa mexer.
+
+Se suas regras liberam apenas a coleção companies, adicione também checkpoints:
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /companies/{companyId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /checkpoints/{checkpointId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+  }
+}
