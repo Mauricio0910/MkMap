@@ -300,6 +300,39 @@
     .lead-actions .btn-primary, .lead-actions .btn-sm { width:100%; padding:12px; border-radius:12px; }
   }
 
+
+
+  /* Checkpoints e Relatório 360 */
+  .checkpoint-container { padding: 1rem; overflow-y: auto; height: 100%; }
+  .checkpoint-grid { display: grid; grid-template-columns: minmax(320px, 1.1fr) minmax(320px, 0.9fr); gap: 1rem; align-items: start; }
+  .checkpoint-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+  .checkpoint-location-card { background:#0b0d13; border:1px solid #2d3a5e; border-radius:12px; padding:12px; color:#cbd5e1; font-size:13px; line-height:1.45; }
+  .checkpoint-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+  .checkpoint-actions .btn-primary, .checkpoint-actions .btn-sm { width:auto; padding:10px 14px; border-radius:10px; }
+  .checkpoint-list { max-height: 720px; overflow-y: auto; }
+  .checkpoint-card { background:#111520; border:1px solid #2d3a5e; border-left:4px solid #38bdf8; border-radius:12px; padding:12px; margin-bottom:10px; cursor:pointer; }
+  .checkpoint-card.hot { border-left-color:#f59e0b; }
+  .checkpoint-card.client { border-left-color:#22c55e; }
+  .checkpoint-card.competitor { border-left-color:#ef4444; }
+  .checkpoint-meta { color:#94a3b8; font-size:11px; margin-top:4px; line-height:1.5; }
+  .report-toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:1rem; }
+  .report-table-wrap { width:100%; overflow-x:auto; border:1px solid #2d3a5e; border-radius:12px; }
+  .report-table { width:100%; border-collapse:collapse; min-width:980px; }
+  .report-table th, .report-table td { padding:10px 12px; border-bottom:1px solid #2d3a5e; text-align:left; font-size:12px; vertical-align:top; }
+  .report-table th { color:#60a5fa; background:#111520; position:sticky; top:0; z-index:1; }
+  .report-table tr:hover td { background:#141a2b; }
+  .report-section-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:1rem; }
+  .pill-soft { display:inline-block; padding:3px 8px; border-radius:999px; background:rgba(59,130,246,.14); color:#93c5fd; font-size:11px; margin:2px 4px 2px 0; }
+  .pill-hot { background:rgba(245,158,11,.16); color:#fbbf24; }
+  .pill-ok { background:rgba(34,197,94,.16); color:#4ade80; }
+  .pill-danger { background:rgba(239,68,68,.16); color:#f87171; }
+  @media (max-width: 900px) {
+    .checkpoint-container { padding:.75rem; padding-bottom:90px; }
+    .checkpoint-grid { grid-template-columns:1fr; }
+    .checkpoint-actions .btn-primary, .checkpoint-actions .btn-sm { width:100%; }
+    .report-toolbar .filter-group, .filter-bar .filter-group { min-width: 100%; }
+  }
+
 </style>
 </head>
 <body>
@@ -328,7 +361,8 @@
     <button class="tab-btn" onclick="switchTab('market',this)">📊 Market Share</button>
     <button class="tab-btn" onclick="switchTab('intelligence',this)">🧠 Inteligência</button>
     <button class="tab-btn" onclick="switchTab('instagram',this)">📸 Instagram</button>
-    <button class="tab-btn" onclick="switchTab('reports',this)">📈 Relatórios</button>
+    <button class="tab-btn" onclick="switchTab('checkpoints',this)">📍 Checkpoints</button>
+    <button class="tab-btn" onclick="switchTab('reports',this)">📈 Relatórios 360</button>
     <button class="tab-btn" onclick="switchTab('competitors',this)">⚠️ Concorrentes</button>
     <button class="tab-btn" onclick="switchTab('admin',this)" id="admin-tab-btn" style="display:none">👥 Admin</button>
   </div>
@@ -386,6 +420,11 @@
   <!-- LEADS INSTAGRAM -->
   <div class="tab-content" id="instagram-tab">
     <div class="instagram-container" id="instagram-container"></div>
+  </div>
+
+  <!-- CHECKPOINTS DE CAMPO -->
+  <div class="tab-content" id="checkpoints-tab">
+    <div class="checkpoint-container" id="checkpoint-container"></div>
   </div>
 
   <!-- RELATÓRIOS -->
@@ -535,7 +574,7 @@ const GOOGLE_MAPS_API_KEY = "";
 // Backend Cloudflare Worker para integração oficial com Instagram/Meta.
 // 1) Cole aqui a URL gerada no Cloudflare, exemplo: "https://marketmap-instagram-api.seunome.workers.dev"
 // 2) A chave abaixo deve ser igual ao Secret MARKETMAP_API_KEY cadastrado no Worker.
-const INSTAGRAM_BACKEND_BASE_URL = "https://marketmap-instagram-api.seunome.workers.dev";
+const INSTAGRAM_BACKEND_BASE_URL = "";
 const MARKETMAP_API_KEY = "MktMap_Instagram_2026_Seguro";
 
 // ========== VARIÁVEIS ==========
@@ -544,6 +583,9 @@ let mapsLoading = false, mapsLoaded = false;
 let currentListMode = 'saved';
 let currentListFilter = 'all';
 let companiesUnsubscribe = null;
+let checkpointsList = [];
+let checkpointsUnsubscribe = null;
+let lastCheckpointPosition = null;
 let appBootStarted = false;
 let lastRenderedCompaniesCount = -1;
 let currentUser = null, currentUserRole = 'consultor';
@@ -627,6 +669,22 @@ function startCompaniesRealtimeListener() {
   });
 }
 
+
+function startCheckpointsRealtimeListener() {
+  if (checkpointsUnsubscribe) return;
+
+  checkpointsUnsubscribe = db.collection('checkpoints').orderBy('createdAt', 'desc').limit(500).onSnapshot(snapshot => {
+    checkpointsList = [];
+    snapshot.forEach(doc => checkpointsList.push({ id: doc.id, ...doc.data() }));
+    console.log('Checkpoints sincronizados em tempo real:', checkpointsList.length);
+    renderApplicationData({ forceSavedList: currentListMode === 'saved' });
+  }, error => {
+    console.error('Erro ao sincronizar checkpoints:', error);
+    // Caso o Firestore reclame de índice/regras, o app segue funcionando com empresas.
+    showNotif('Checkpoints ainda não carregaram. Confira regras do Firestore se necessário.', 'error');
+  });
+}
+
 function renderApplicationData(options = {}) {
   const forceSavedList = options.forceSavedList === true;
 
@@ -641,6 +699,7 @@ function renderApplicationData(options = {}) {
   updateMarketShare();
   updateIntelligenceDashboard();
   updateInstagramLeads();
+  updateCheckpointModule();
   updateReports();
   updateCompetitorsList();
   lastRenderedCompaniesCount = companiesList.length;
@@ -664,6 +723,7 @@ async function bootAppAfterAuth(user) {
     document.getElementById('screen-app').classList.add('active');
 
     startCompaniesRealtimeListener();
+    startCheckpointsRealtimeListener();
     await loadCompanies();
     loadGoogleMaps();
 
@@ -1773,174 +1833,607 @@ function updateMarketShare() {
   `;
 }
 
-// ========== RELATÓRIOS ==========
+// ========== CHECKPOINTS DE CAMPO ==========
+function getCompanyStatusLabel(company) {
+  if (company?.isCustomer) return 'Cliente';
+  if (company?.isExClient) return 'Ex-Cliente';
+  if (company?.isCompetitor) return 'Cliente de Concorrente';
+  if (company?.hasNoSystem) return 'Sem Sistema';
+  return company?.status || 'Prospect';
+}
+
+function getStatusPillClass(status) {
+  const s = normalizeSearchText(status);
+  if (s.includes('cliente') && !s.includes('concorrente')) return 'pill-ok';
+  if (s.includes('concorrente') || s.includes('ex')) return 'pill-danger';
+  if (s.includes('oportun') || s.includes('potencial') || s.includes('sem sistema')) return 'pill-hot';
+  return '';
+}
+
+function getCompanyStreet(company) {
+  return company.street || extractLocationDetails(company.address || '').street || '';
+}
+
+function getCompanyNeighborhood(company) {
+  return company.neighborhood || extractLocationDetails(company.address || '').neighborhood || '';
+}
+
+function getCompanySegment(company) {
+  return company.segment || company.businessSegment || 'Não informado';
+}
+
+function parseAddressComponentsFromGoogle(result) {
+  const out = { street:'', number:'', neighborhood:'', city:'', state:'', country:'Brasil', postalCode:'' };
+  const comps = result?.address_components || [];
+  comps.forEach(comp => {
+    const types = comp.types || [];
+    if (types.includes('route')) out.street = comp.long_name || comp.short_name || out.street;
+    if (types.includes('street_number')) out.number = comp.long_name || out.number;
+    if (types.includes('sublocality') || types.includes('sublocality_level_1') || types.includes('neighborhood')) out.neighborhood = comp.long_name || out.neighborhood;
+    if (types.includes('administrative_area_level_2')) out.city = comp.long_name || out.city;
+    if (types.includes('administrative_area_level_1')) out.state = comp.short_name || comp.long_name || out.state;
+    if (types.includes('country')) out.country = comp.long_name || out.country;
+    if (types.includes('postal_code')) out.postalCode = comp.long_name || out.postalCode;
+  });
+  if (!out.city || !out.state || !out.street) {
+    const basic = extractLocationDetails(result?.formatted_address || '');
+    out.city = out.city || basic.city;
+    out.state = out.state || basic.state;
+    out.street = out.street || basic.street;
+  }
+  return out;
+}
+
+function formatDateTimeBr(value) {
+  if (!value) return 'Não informado';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  return d.toLocaleString('pt-BR');
+}
+
+function getUserPositionPromise() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('Geolocalização não disponível neste dispositivo.'));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(position => {
+      resolve({
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+        accuracy: position.coords.accuracy || null
+      });
+    }, error => {
+      reject(new Error(error?.message || 'Não foi possível obter a localização.'));
+    }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
+  });
+}
+
+async function reverseGeocodePosition(pos) {
+  if (!geocoder || !pos) return null;
+  return new Promise(resolve => {
+    geocoder.geocode({ location: { lat: pos.lat, lng: pos.lng } }, (results, status) => {
+      if (status === 'OK' && results?.[0]) resolve(results[0]);
+      else resolve(null);
+    });
+  });
+}
+
+function buildCompanyOptions(selectedId = '') {
+  const opts = ['<option value="">Criar checkpoint sem vincular empresa</option>'];
+  companiesList
+    .slice()
+    .sort((a,b) => String(a.name || '').localeCompare(String(b.name || ''), 'pt-BR'))
+    .forEach(c => {
+      opts.push(`<option value="${escapeHtml(c.id)}" ${String(c.id) === String(selectedId) ? 'selected' : ''}>${escapeHtml(c.name || 'Empresa sem nome')} ${c.address ? '— ' + escapeHtml(c.address).slice(0,70) : ''}</option>`);
+    });
+  return opts.join('');
+}
+
+function updateCheckpointModule() {
+  const container = document.getElementById('checkpoint-container');
+  if (!container) return;
+
+  const recent = checkpointsList.slice(0, 25);
+  const hot = checkpointsList.filter(cp => getPriority(cp) === 'Alta' || cp.opportunityType || cp.isPotentialClient).length;
+  const today = new Date().toISOString().slice(0,10);
+  const todayCount = checkpointsList.filter(cp => String(cp.createdAt || '').slice(0,10) === today).length;
+
+  container.innerHTML = `
+    <div class="checkpoint-grid">
+      <div class="report-card">
+        <div class="report-title">📍 Checkpoint de campo</div>
+        <div style="color:#94a3b8;font-size:13px;line-height:1.5;margin-bottom:1rem">
+          Use este módulo quando o consultor estiver na rua. O sistema captura a localização atual, registra rua/bairro/cidade/estado e permite vincular o ponto a uma empresa já cadastrada ou criar uma nova oportunidade.
+        </div>
+
+        <div class="checkpoint-actions" style="margin-bottom:1rem">
+          <button class="btn-primary" style="background:#0ea5e9" onclick="captureCheckpointLocation()">📡 Gerar checkpoint no local atual</button>
+          <button class="btn-sm" onclick="clearCheckpointForm()">Limpar formulário</button>
+        </div>
+
+        <div id="checkpoint-location-status" class="checkpoint-location-card">
+          Nenhum checkpoint capturado ainda. Clique em <strong>Gerar checkpoint no local atual</strong> para buscar GPS e endereço.
+        </div>
+
+        <div class="section-title" style="margin-top:1rem">🏢 Empresa e classificação</div>
+        <div class="checkpoint-form-grid">
+          <div class="field-group"><div class="field-label">Empresa já cadastrada</div><select id="cp-company-id" class="field-input" onchange="fillCheckpointFromCompany()">${buildCompanyOptions()}</select></div>
+          <div class="field-group"><div class="field-label">Nome da empresa/local *</div><input type="text" id="cp-company-name" class="field-input" placeholder="Ex: Mercado Central, Loja Silva"></div>
+          <div class="field-group"><div class="field-label">Segmento *</div><input type="text" id="cp-segment" class="field-input" placeholder="Ex: supermercado, farmácia, autopeças"></div>
+          <div class="field-group"><div class="field-label">Status comercial</div><select id="cp-status" class="field-input"><option>Prospect</option><option>Cliente potencial</option><option>Cliente</option><option>Cliente de Concorrente</option><option>Ex-Cliente</option><option>Sem Sistema</option><option>Não qualificado</option></select></div>
+          <div class="field-group"><div class="field-label">Possui sistema?</div><select id="cp-system-type" class="field-input"><option value="unknown">Não informado</option><option value="has_system">Possui sistema</option><option value="no_system">Sem sistema</option></select></div>
+          <div class="field-group"><div class="field-label">Sistema / concorrente atual</div><input type="text" id="cp-system" class="field-input" placeholder="Ex: sistema usado ou concorrente"></div>
+          <div class="field-group"><div class="field-label">Responsável / contato</div><input type="text" id="cp-contact" class="field-input" placeholder="Nome do contato"></div>
+          <div class="field-group"><div class="field-label">WhatsApp / telefone</div><input type="tel" id="cp-phone" class="field-input" placeholder="(00) 00000-0000"></div>
+          <div class="field-group"><div class="field-label">Instagram</div><input type="text" id="cp-instagram" class="field-input" placeholder="@empresa ou link"></div>
+          <div class="field-group"><div class="field-label">Potencial estimado</div><input type="text" id="cp-potential" class="field-input" placeholder="Ex: 2 caixas, R$ 450/mês"></div>
+          <div class="field-group"><div class="field-label">Tipo de oportunidade</div><select id="cp-opportunity" class="field-input"><option value="">Selecione</option><option>Implantação ERP</option><option>Troca de sistema concorrente</option><option>TEF / RenPay</option><option>PDV / frente de loja</option><option>Fiscal / MDe / Imendes</option><option>E-commerce / integração</option><option>Retorno futuro</option></select></div>
+          <div class="field-group"><div class="field-label">Prioridade</div><select id="cp-priority" class="field-input"><option>Alta</option><option selected>Média</option><option>Baixa</option></select></div>
+          <div class="field-group"><div class="field-label">Próxima ação</div><input type="text" id="cp-next-action" class="field-input" placeholder="Ex: ligar, visitar, enviar proposta"></div>
+          <div class="field-group"><div class="field-label">Data da próxima ação</div><input type="date" id="cp-next-date" class="field-input"></div>
+        </div>
+        <div class="field-group"><div class="field-label">Observações do checkpoint</div><textarea id="cp-notes" class="field-input" rows="4" placeholder="Movimento da loja, dor percebida, concorrente, oportunidade, objeções, nome do decisor..."></textarea></div>
+        <div class="checkbox-group">
+          <label><input type="checkbox" id="cp-update-company" checked> Atualizar/criar empresa na base principal</label>
+          <label><input type="checkbox" id="cp-is-potential" checked> Marcar como cliente potencial/oportunidade</label>
+        </div>
+        <div class="checkpoint-actions">
+          <button class="btn-primary" style="background:#22c55e" onclick="saveCheckpoint()">💾 Salvar checkpoint</button>
+          <button class="btn-sm" onclick="openMapsFromCheckpoint()">🗺 Abrir no mapa</button>
+        </div>
+      </div>
+
+      <div class="report-card">
+        <div class="report-title">🧭 Checkpoints recentes</div>
+        <div class="stats-grid" style="grid-template-columns: repeat(auto-fit,minmax(130px,1fr));">
+          <div class="stat-card"><div class="stat-number">${checkpointsList.length}</div><div>Total</div></div>
+          <div class="stat-card"><div class="stat-number" style="color:#22c55e">${todayCount}</div><div>Hoje</div></div>
+          <div class="stat-card"><div class="stat-number" style="color:#f59e0b">${hot}</div><div>Oportunidades</div></div>
+        </div>
+        <div class="checkpoint-list">
+          ${recent.length ? recent.map(renderCheckpointCard).join('') : '<div class="empty-state">Nenhum checkpoint salvo ainda.</div>'}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderCheckpointCard(cp) {
+  const status = cp.status || (cp.isPotentialClient ? 'Cliente potencial' : 'Prospect');
+  const cardClass = ['checkpoint-card'];
+  if (getPriority(cp) === 'Alta' || cp.isPotentialClient) cardClass.push('hot');
+  if (normalizeSearchText(status).includes('cliente') && !normalizeSearchText(status).includes('concorrente')) cardClass.push('client');
+  if (normalizeSearchText(status).includes('concorrente')) cardClass.push('competitor');
+  return `
+    <div class="${cardClass.join(' ')}" onclick="focusCheckpoint('${escapeHtml(cp.id)}')">
+      <strong>${escapeHtml(cp.companyName || cp.name || 'Ponto sem nome')}</strong><br>
+      <span class="pill-soft ${getStatusPillClass(status)}">${escapeHtml(status)}</span>
+      ${cp.segment ? `<span class="pill-soft">🏷️ ${escapeHtml(cp.segment)}</span>` : ''}
+      ${cp.opportunityType ? `<span class="pill-soft pill-hot">🎯 ${escapeHtml(cp.opportunityType)}</span>` : ''}
+      <div class="checkpoint-meta">
+        📍 ${escapeHtml([cp.street, cp.neighborhood, cp.city, cp.state].filter(Boolean).join(' • ') || cp.address || 'Local não informado')}<br>
+        🕒 ${formatDateTimeBr(cp.createdAt)}${cp.createdByEmail ? ' • ' + escapeHtml(cp.createdByEmail) : ''}
+      </div>
+    </div>
+  `;
+}
+
+async function captureCheckpointLocation() {
+  const status = document.getElementById('checkpoint-location-status');
+  if (status) status.innerHTML = '📡 Buscando sua localização atual...';
+  try {
+    const pos = await getUserPositionPromise();
+    lastCheckpointPosition = pos;
+    let address = '';
+    let parts = { street:'', number:'', neighborhood:'', city:'', state:'', country:'Brasil', postalCode:'' };
+    const geoResult = await reverseGeocodePosition(pos);
+    if (geoResult) {
+      address = geoResult.formatted_address || '';
+      parts = parseAddressComponentsFromGoogle(geoResult);
+    }
+    lastCheckpointPosition.address = address;
+    lastCheckpointPosition.addressParts = parts;
+    if (status) {
+      status.innerHTML = `
+        <strong>✅ Checkpoint capturado</strong><br>
+        Latitude: ${pos.lat.toFixed(6)} • Longitude: ${pos.lng.toFixed(6)}${pos.accuracy ? ` • Precisão: ${Math.round(pos.accuracy)}m` : ''}<br>
+        Rua: ${escapeHtml([parts.street, parts.number].filter(Boolean).join(', ') || 'não identificada')}<br>
+        Bairro: ${escapeHtml(parts.neighborhood || 'não identificado')} • Cidade: ${escapeHtml(parts.city || 'não identificada')} • Estado: ${escapeHtml(parts.state || 'não identificado')}<br>
+        <span style="color:#94a3b8">${escapeHtml(address || 'Endereço não retornado pelo Google.')}</span>
+      `;
+    }
+    if (map) {
+      map.setCenter({ lat: pos.lat, lng: pos.lng });
+      map.setZoom(17);
+      new google.maps.Marker({ position: { lat: pos.lat, lng: pos.lng }, map, title: 'Checkpoint atual' });
+    }
+    showNotif('✅ Checkpoint capturado.', 'success');
+  } catch (error) {
+    if (status) status.innerHTML = `⚠️ ${escapeHtml(error.message)} Permita localização no navegador e tente novamente.`;
+    showNotif('Não foi possível capturar a localização.', 'error');
+  }
+}
+
+function clearCheckpointForm() {
+  ['cp-company-name','cp-segment','cp-system','cp-contact','cp-phone','cp-instagram','cp-potential','cp-next-action','cp-next-date','cp-notes'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  ['cp-company-id','cp-status','cp-system-type','cp-opportunity','cp-priority'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.selectedIndex = 0;
+  });
+  const priority = document.getElementById('cp-priority'); if (priority) priority.value = 'Média';
+  const upd = document.getElementById('cp-update-company'); if (upd) upd.checked = true;
+  const pot = document.getElementById('cp-is-potential'); if (pot) pot.checked = true;
+  lastCheckpointPosition = null;
+  const status = document.getElementById('checkpoint-location-status');
+  if (status) status.innerHTML = 'Nenhum checkpoint capturado ainda. Clique em <strong>Gerar checkpoint no local atual</strong> para buscar GPS e endereço.';
+}
+
+function fillCheckpointFromCompany() {
+  const id = document.getElementById('cp-company-id')?.value;
+  const c = companiesList.find(item => String(item.id) === String(id));
+  if (!c) return;
+  const set = (id, val) => { const el = document.getElementById(id); if (el && !el.value) el.value = val || ''; };
+  set('cp-company-name', c.name);
+  set('cp-segment', c.segment);
+  set('cp-system', c.system || c.competitorName);
+  set('cp-contact', c.contactName);
+  set('cp-phone', c.phone);
+  set('cp-instagram', c.instagramHandle ? '@' + c.instagramHandle : c.instagramUrl);
+  set('cp-potential', c.potential);
+  set('cp-next-action', c.nextAction);
+  set('cp-next-date', c.nextActionDate);
+  set('cp-notes', c.notes);
+  const status = document.getElementById('cp-status'); if (status) status.value = getCompanyStatusLabel(c);
+  const sysType = document.getElementById('cp-system-type'); if (sysType) sysType.value = c.hasNoSystem ? 'no_system' : (c.system ? 'has_system' : 'unknown');
+}
+
+function buildCompanyDataFromCheckpoint(cp) {
+  const statusText = normalizeSearchText(cp.status || '');
+  const hasNoSystem = cp.systemType === 'no_system' || statusText.includes('sem sistema');
+  const isCustomer = statusText === 'cliente';
+  const isExClient = statusText.includes('ex-cliente') || statusText.includes('ex cliente');
+  const isCompetitor = statusText.includes('concorrente');
+  return {
+    name: cp.companyName,
+    address: cp.address || [cp.street, cp.neighborhood, cp.city, cp.state].filter(Boolean).join(', '),
+    lat: cp.lat || null,
+    lng: cp.lng || null,
+    street: cp.street || null,
+    neighborhood: cp.neighborhood || null,
+    city: cp.city || null,
+    state: cp.state || null,
+    segment: cp.segment || null,
+    system: hasNoSystem ? null : (cp.system || null),
+    counter: null,
+    hasNoSystem,
+    isCustomer,
+    isExClient,
+    isCompetitor,
+    isVisited: true,
+    competitorName: isCompetitor ? (cp.system || cp.competitorName || null) : null,
+    contactName: cp.contactName || null,
+    phone: cp.phone || null,
+    instagramHandle: cp.instagramHandle || null,
+    instagramUrl: cp.instagramUrl || null,
+    potential: cp.potential || null,
+    opportunityType: cp.opportunityType || null,
+    isPotentialClient: cp.isPotentialClient || false,
+    priority: cp.priority || null,
+    nextAction: cp.nextAction || null,
+    nextActionDate: cp.nextActionDate || null,
+    notes: cp.notes || null,
+    leadSource: cp.instagramHandle ? 'instagram' : 'checkpoint',
+    lastCheckpointAt: cp.createdAt,
+    updatedAt: new Date().toISOString()
+  };
+}
+
+async function saveCheckpoint() {
+  const companyId = document.getElementById('cp-company-id')?.value || '';
+  const companyName = document.getElementById('cp-company-name')?.value.trim() || '';
+  const segment = document.getElementById('cp-segment')?.value.trim() || '';
+  if (!companyName) { showNotif('Informe o nome da empresa/local.', 'error'); return; }
+  if (!segment) { showNotif('Informe o segmento da empresa.', 'error'); return; }
+
+  const pos = lastCheckpointPosition || {};
+  const parts = pos.addressParts || {};
+  const instagramHandle = parseInstagramHandle(document.getElementById('cp-instagram')?.value || '');
+  const createdAt = new Date().toISOString();
+  const checkpointData = {
+    companyId: companyId || null,
+    companyName,
+    segment,
+    status: document.getElementById('cp-status')?.value || 'Prospect',
+    systemType: document.getElementById('cp-system-type')?.value || 'unknown',
+    system: document.getElementById('cp-system')?.value.trim() || null,
+    contactName: document.getElementById('cp-contact')?.value.trim() || null,
+    phone: document.getElementById('cp-phone')?.value.trim() || null,
+    instagramHandle: instagramHandle || null,
+    instagramUrl: instagramHandle ? buildInstagramUrl(instagramHandle) : null,
+    potential: document.getElementById('cp-potential')?.value.trim() || null,
+    opportunityType: document.getElementById('cp-opportunity')?.value || null,
+    priority: document.getElementById('cp-priority')?.value || 'Média',
+    nextAction: document.getElementById('cp-next-action')?.value.trim() || null,
+    nextActionDate: document.getElementById('cp-next-date')?.value || null,
+    notes: document.getElementById('cp-notes')?.value.trim() || null,
+    isPotentialClient: document.getElementById('cp-is-potential')?.checked || false,
+    lat: pos.lat || null,
+    lng: pos.lng || null,
+    accuracy: pos.accuracy || null,
+    address: pos.address || '',
+    street: [parts.street, parts.number].filter(Boolean).join(', ') || null,
+    neighborhood: parts.neighborhood || null,
+    city: parts.city || null,
+    state: parts.state || null,
+    country: parts.country || 'Brasil',
+    createdAt,
+    updatedAt: createdAt,
+    createdByUid: auth.currentUser?.uid || null,
+    createdByEmail: auth.currentUser?.email || null,
+    source: 'checkpoint'
+  };
+
+  try {
+    const docId = Date.now().toString();
+    await db.collection('checkpoints').doc(docId).set({ ...checkpointData, id: docId });
+
+    if (document.getElementById('cp-update-company')?.checked) {
+      const companyData = buildCompanyDataFromCheckpoint(checkpointData);
+      if (companyId) {
+        await db.collection('companies').doc(companyId).update(companyData);
+      } else {
+        const newId = 'checkpoint_' + docId;
+        await db.collection('companies').doc(newId).set({ ...companyData, id: newId, createdAt });
+      }
+    }
+
+    showNotif('✅ Checkpoint salvo e base atualizada.', 'success');
+    clearCheckpointForm();
+    renderApplicationData({ forceSavedList: currentListMode === 'saved' });
+  } catch (error) {
+    console.error('Erro ao salvar checkpoint:', error);
+    showNotif('Erro ao salvar checkpoint. Confira regras do Firestore.', 'error');
+  }
+}
+
+function focusCheckpoint(checkpointId) {
+  const cp = checkpointsList.find(item => String(item.id) === String(checkpointId));
+  if (!cp) return;
+  if (map && cp.lat && cp.lng) {
+    switchTab('map', document.querySelector('.tab-btn[onclick*="map"]'));
+    map.setCenter({ lat: Number(cp.lat), lng: Number(cp.lng) });
+    map.setZoom(18);
+    new google.maps.Marker({ position: { lat: Number(cp.lat), lng: Number(cp.lng) }, map, title: cp.companyName || 'Checkpoint' });
+  }
+  showNotif(cp.address || 'Checkpoint selecionado.', 'success');
+}
+
+function openMapsFromCheckpoint() {
+  const pos = lastCheckpointPosition;
+  if (!pos?.lat || !pos?.lng) { showNotif('Capture o checkpoint antes de abrir no mapa.', 'error'); return; }
+  window.open(`https://www.google.com/maps?q=${pos.lat},${pos.lng}`, '_blank');
+}
+
+// ========== RELATÓRIOS 360 ==========
+function buildReportRows() {
+  const companyRows = companiesList.map(c => ({
+    kind: 'Empresa',
+    id: c.id,
+    companyName: c.name || 'Empresa sem nome',
+    status: getCompanyStatusLabel(c),
+    segment: getCompanySegment(c),
+    street: getCompanyStreet(c),
+    neighborhood: getCompanyNeighborhood(c),
+    city: getCompanyCity(c),
+    state: getCompanyState(c),
+    address: c.address || '',
+    system: c.system || c.competitorName || '',
+    potential: c.potential || '',
+    opportunityType: c.opportunityType || '',
+    isPotentialClient: c.isPotentialClient || (!c.isCustomer && (c.hasNoSystem || c.potential || getPriority(c) === 'Alta')),
+    priority: getPriority(c),
+    nextAction: c.nextAction || '',
+    nextActionDate: c.nextActionDate || '',
+    contactName: c.contactName || '',
+    phone: c.phone || '',
+    instagramHandle: c.instagramHandle || '',
+    source: c.leadSource || 'base',
+    date: c.updatedAt || c.createdAt || '',
+    notes: c.notes || '',
+    lat: c.lat || null,
+    lng: c.lng || null
+  }));
+
+  const checkpointRows = checkpointsList.map(cp => ({
+    kind: 'Checkpoint',
+    id: cp.id,
+    companyName: cp.companyName || 'Ponto sem nome',
+    status: cp.status || (cp.isPotentialClient ? 'Cliente potencial' : 'Prospect'),
+    segment: cp.segment || 'Não informado',
+    street: cp.street || '',
+    neighborhood: cp.neighborhood || '',
+    city: cp.city || '',
+    state: cp.state || '',
+    address: cp.address || [cp.street, cp.neighborhood, cp.city, cp.state].filter(Boolean).join(', '),
+    system: cp.system || '',
+    potential: cp.potential || '',
+    opportunityType: cp.opportunityType || '',
+    isPotentialClient: cp.isPotentialClient || Boolean(cp.opportunityType),
+    priority: cp.priority || getPriority(cp),
+    nextAction: cp.nextAction || '',
+    nextActionDate: cp.nextActionDate || '',
+    contactName: cp.contactName || '',
+    phone: cp.phone || '',
+    instagramHandle: cp.instagramHandle || '',
+    source: cp.source || 'checkpoint',
+    date: cp.createdAt || '',
+    notes: cp.notes || '',
+    lat: cp.lat || null,
+    lng: cp.lng || null
+  }));
+  return [...companyRows, ...checkpointRows];
+}
+
+function uniqueReportValues(rows, field) {
+  return [...new Set(rows.map(r => r[field]).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR'));
+}
+
 function updateReports() {
   const container = document.getElementById('reports-container');
   if (!container) return;
-  
-  const competitorsList = companiesList.filter(c => c.isCompetitor === true);
-  const uniqueCompetitorNames = [...new Set(competitorsList.map(c => c.competitorName).filter(n => n))];
-  const uniqueStates = [...new Set(companiesList.map(c => extractLocationDetails(c.address).state).filter(s => s))];
-  const uniqueCities = [...new Set(companiesList.map(c => extractLocationDetails(c.address).city).filter(c => c))];
-  
-  const html = `
+  const rows = buildReportRows();
+  const states = uniqueReportValues(rows, 'state');
+  const cities = uniqueReportValues(rows, 'city');
+  const neighborhoods = uniqueReportValues(rows, 'neighborhood');
+  const streets = uniqueReportValues(rows, 'street');
+  const segments = uniqueReportValues(rows, 'segment').filter(v => v !== 'Não informado');
+
+  container.innerHTML = `
     <div class="filter-bar">
-      <div class="filter-group">
-        <label>🏆 CONCORRENTE</label>
-        <select id="filter-competitor-name" class="filter-select" onchange="applyReportsFilter()">
-          <option value="">Todos os concorrentes</option>
-          ${uniqueCompetitorNames.map(n => `<option value="${n}">${n}</option>`).join('')}
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>📍 ESTADO</label>
-        <select id="filter-state" class="filter-select" onchange="updateCityFilter(); applyReportsFilter()">
-          <option value="">Todos os estados</option>
-          ${uniqueStates.sort().map(s => `<option value="${s}">${brazilStates[s] || s}</option>`).join('')}
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>🏙️ CIDADE</label>
-        <select id="filter-city" class="filter-select" onchange="applyReportsFilter()">
-          <option value="">Todas as cidades</option>
-          ${uniqueCities.sort().map(c => `<option value="${c}">${c}</option>`).join('')}
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>📊 STATUS</label>
-        <select id="filter-status" class="filter-select" onchange="applyReportsFilter()">
-          <option value="">Todos</option>
-          <option value="customer">✅ Clientes</option>
-          <option value="exclient">⚠️ Ex-Clientes</option>
-          <option value="competitor">🏆 Concorrentes</option>
-          <option value="nosystem">❌ Sem Sistema</option>
-        </select>
-      </div>
-      <button class="btn-sm" onclick="resetReportsFilters()" style="background:#f59e0b;color:#fff">Limpar Filtros</button>
+      <div class="filter-group"><label>🛣️ RUA</label><select id="r360-street" class="filter-select" onchange="generateFullReport()"><option value="">Todas as ruas</option>${streets.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('')}</select></div>
+      <div class="filter-group"><label>🏘️ BAIRRO</label><select id="r360-neighborhood" class="filter-select" onchange="generateFullReport()"><option value="">Todos os bairros</option>${neighborhoods.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('')}</select></div>
+      <div class="filter-group"><label>🏙️ CIDADE</label><select id="r360-city" class="filter-select" onchange="generateFullReport()"><option value="">Todas as cidades</option>${cities.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('')}</select></div>
+      <div class="filter-group"><label>📍 ESTADO</label><select id="r360-state" class="filter-select" onchange="generateFullReport()"><option value="">Todos os estados</option>${states.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(brazilStates[v] || v)}</option>`).join('')}</select></div>
+      <div class="filter-group"><label>🏷️ SEGMENTO</label><select id="r360-segment" class="filter-select" onchange="generateFullReport()"><option value="">Todos os segmentos</option>${segments.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('')}</select></div>
+      <div class="filter-group"><label>📊 STATUS</label><select id="r360-status" class="filter-select" onchange="generateFullReport()"><option value="">Todos</option><option>Cliente potencial</option><option>Cliente</option><option>Cliente de Concorrente</option><option>Sem Sistema</option><option>Prospect</option><option>Ex-Cliente</option></select></div>
+      <div class="filter-group"><label>🔎 BUSCA LIVRE</label><input id="r360-search" class="filter-input" oninput="generateFullReport()" placeholder="Nome, sistema, contato, observação"></div>
+      <button class="btn-sm" onclick="resetReportsFilters()" style="background:#f59e0b;color:#fff">Limpar filtros</button>
+      <button class="btn-sm" onclick="exportReportCsv()" style="background:#22c55e;color:#fff">Exportar CSV</button>
     </div>
     <div id="reports-results"></div>
   `;
-  
-  container.innerHTML = html;
-  
-  window.updateCityFilter = function() {
-    const selectedState = document.getElementById('filter-state')?.value || '';
-    const citiesInState = [...new Set(companiesList.filter(c => extractLocationDetails(c.address).state === selectedState).map(c => extractLocationDetails(c.address).city))];
-    const citySelect = document.getElementById('filter-city');
-    if (citySelect) {
-      citySelect.innerHTML = `<option value="">Todas as cidades</option>${citiesInState.sort().map(c => `<option value="${c}">${c}</option>`).join('')}`;
+  generateFullReport();
+}
+
+function getReportFilters() {
+  return {
+    street: document.getElementById('r360-street')?.value || '',
+    neighborhood: document.getElementById('r360-neighborhood')?.value || '',
+    city: document.getElementById('r360-city')?.value || '',
+    state: document.getElementById('r360-state')?.value || '',
+    segment: document.getElementById('r360-segment')?.value || '',
+    status: document.getElementById('r360-status')?.value || '',
+    search: normalizeSearchText(document.getElementById('r360-search')?.value || '')
+  };
+}
+
+function filterReportRows(rows) {
+  const f = getReportFilters();
+  return rows.filter(r => {
+    if (f.street && r.street !== f.street) return false;
+    if (f.neighborhood && r.neighborhood !== f.neighborhood) return false;
+    if (f.city && r.city !== f.city) return false;
+    if (f.state && r.state !== f.state) return false;
+    if (f.segment && r.segment !== f.segment) return false;
+    if (f.status && r.status !== f.status) return false;
+    if (f.search) {
+      const hay = normalizeSearchText([r.companyName, r.address, r.system, r.potential, r.opportunityType, r.contactName, r.phone, r.instagramHandle, r.notes].join(' '));
+      if (!hay.includes(f.search)) return false;
     }
-    applyReportsFilter();
-  };
-  
-  window.applyReportsFilter = function() { generateFullReport(); };
-  window.resetReportsFilters = function() {
-    document.getElementById('filter-competitor-name').value = '';
-    document.getElementById('filter-state').value = '';
-    document.getElementById('filter-city').value = '';
-    document.getElementById('filter-status').value = '';
-    applyReportsFilter();
-  };
-  
+    return true;
+  });
+}
+
+function resetReportsFilters() {
+  ['r360-street','r360-neighborhood','r360-city','r360-state','r360-segment','r360-status','r360-search'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
   generateFullReport();
 }
 
 function generateFullReport() {
   const resultsDiv = document.getElementById('reports-results');
   if (!resultsDiv) return;
-  
-  const competitorNameFilter = document.getElementById('filter-competitor-name')?.value || '';
-  const stateFilter = document.getElementById('filter-state')?.value || '';
-  const cityFilter = document.getElementById('filter-city')?.value || '';
-  const statusFilter = document.getElementById('filter-status')?.value || '';
-  
-  let filtered = [...companiesList];
-  
-  if (competitorNameFilter) {
-    filtered = filtered.filter(c => c.competitorName === competitorNameFilter);
-  }
-  if (stateFilter) {
-    filtered = filtered.filter(c => extractLocationDetails(c.address).state === stateFilter);
-  }
-  if (cityFilter) {
-    filtered = filtered.filter(c => extractLocationDetails(c.address).city === cityFilter);
-  }
-  if (statusFilter === 'customer') {
-    filtered = filtered.filter(c => c.isCustomer === true);
-  } else if (statusFilter === 'exclient') {
-    filtered = filtered.filter(c => c.isExClient === true);
-  } else if (statusFilter === 'competitor') {
-    filtered = filtered.filter(c => c.isCompetitor === true);
-  } else if (statusFilter === 'nosystem') {
-    filtered = filtered.filter(c => c.hasNoSystem === true);
-  }
-  
-  const customers = filtered.filter(c => c.isCustomer === true);
-  const exCustomers = filtered.filter(c => c.isExClient === true);
-  const competitors = filtered.filter(c => c.isCompetitor === true);
-  const noSystem = filtered.filter(c => c.hasNoSystem === true);
-  
-  let html = `
+  const rows = filterReportRows(buildReportRows()).sort((a,b) => String(b.date || '').localeCompare(String(a.date || '')));
+  const opportunities = rows.filter(r => r.isPotentialClient || r.opportunityType || normalizeSearchText(r.status).includes('potencial'));
+  const customers = rows.filter(r => r.status === 'Cliente');
+  const competitorClients = rows.filter(r => normalizeSearchText(r.status).includes('concorrente'));
+  const checkpoints = rows.filter(r => r.kind === 'Checkpoint');
+  const noSystem = rows.filter(r => normalizeSearchText(r.status).includes('sem sistema'));
+
+  const byStreet = sortedEntries(countBy(rows, r => r.street || 'Rua não informada'), 10);
+  const byNeighborhood = sortedEntries(countBy(rows, r => r.neighborhood || 'Bairro não informado'), 10);
+  const byCity = sortedEntries(countBy(rows, r => r.city || 'Cidade não informada'), 10);
+  const bySegment = sortedEntries(countBy(rows, r => r.segment || 'Não informado'), 10);
+  const byOpportunity = sortedEntries(countBy(opportunities, r => r.opportunityType || r.status || 'Oportunidade'), 10);
+
+  resultsDiv.innerHTML = `
     <div class="stats-grid">
-      <div class="stat-card"><div class="stat-number" style="color:#22c55e">${customers.length}</div><div>✅ Clientes</div></div>
-      <div class="stat-card"><div class="stat-number" style="color:#f59e0b">${exCustomers.length}</div><div>⚠️ Ex-Clientes</div></div>
-      <div class="stat-card"><div class="stat-number" style="color:#ef4444">${competitors.length}</div><div>🏆 Concorrentes</div></div>
-      <div class="stat-card"><div class="stat-number" style="color:#94a3b8">${noSystem.length}</div><div>❌ Sem Sistema</div></div>
+      <div class="stat-card"><div class="stat-number">${rows.length}</div><div>Registros filtrados</div></div>
+      <div class="stat-card"><div class="stat-number" style="color:#38bdf8">${checkpoints.length}</div><div>Checkpoints</div></div>
+      <div class="stat-card"><div class="stat-number" style="color:#f59e0b">${opportunities.length}</div><div>Oportunidades / potenciais</div></div>
+      <div class="stat-card"><div class="stat-number" style="color:#22c55e">${customers.length}</div><div>Clientes</div></div>
+      <div class="stat-card"><div class="stat-number" style="color:#ef4444">${competitorClients.length}</div><div>Clientes de concorrentes</div></div>
+      <div class="stat-card"><div class="stat-number" style="color:#94a3b8">${noSystem.length}</div><div>Sem sistema</div></div>
+    </div>
+
+    <div class="report-section-grid">
+      <div class="report-card"><div class="report-title">🛣️ Top ruas</div>${renderRankingList(Object.fromEntries(byStreet), 'Sem rua informada.')}</div>
+      <div class="report-card"><div class="report-title">🏘️ Top bairros</div>${renderRankingList(Object.fromEntries(byNeighborhood), 'Sem bairro informado.')}</div>
+      <div class="report-card"><div class="report-title">🏙️ Top cidades</div>${renderRankingList(Object.fromEntries(byCity), 'Sem cidade informada.')}</div>
+      <div class="report-card"><div class="report-title">🏷️ Top segmentos</div>${renderRankingList(Object.fromEntries(bySegment), 'Sem segmento informado.')}</div>
+      <div class="report-card"><div class="report-title">🎯 Tipos de oportunidade</div>${renderRankingList(Object.fromEntries(byOpportunity), 'Sem oportunidades identificadas.')}</div>
+    </div>
+
+    <div class="report-card">
+      <div class="report-title">📋 Relatório detalhado</div>
+      ${rows.length ? renderReportTable(rows) : '<div class="empty-state">Nenhum registro encontrado para os filtros selecionados.</div>'}
     </div>
   `;
-  
-  if (filtered.length === 0) {
-    html += `<div class="report-card"><div class="empty-state">⚠️ Nenhuma empresa encontrada com os filtros selecionados.</div></div>`;
-    resultsDiv.innerHTML = html;
+}
+
+function renderReportTable(rows) {
+  return `
+    <div class="report-table-wrap">
+      <table class="report-table">
+        <thead><tr><th>Tipo</th><th>Empresa/Local</th><th>Status</th><th>Segmento</th><th>Rua</th><th>Bairro</th><th>Cidade/UF</th><th>Oportunidade</th><th>Potencial</th><th>Contato</th><th>Próxima ação</th></tr></thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr onclick="openReportRow('${escapeHtml(r.kind)}','${escapeHtml(r.id)}')">
+              <td>${escapeHtml(r.kind)}</td>
+              <td><strong>${escapeHtml(r.companyName)}</strong>${r.instagramHandle ? `<br><span style="color:#f472b6">@${escapeHtml(r.instagramHandle)}</span>` : ''}</td>
+              <td><span class="pill-soft ${getStatusPillClass(r.status)}">${escapeHtml(r.status)}</span><br><span style="color:#94a3b8">${escapeHtml(r.priority || '')}</span></td>
+              <td>${escapeHtml(r.segment || 'Não informado')}</td>
+              <td>${escapeHtml(r.street || 'Não informada')}</td>
+              <td>${escapeHtml(r.neighborhood || 'Não informado')}</td>
+              <td>${escapeHtml([r.city, r.state].filter(Boolean).join(' - ') || 'Não informado')}</td>
+              <td>${escapeHtml(r.opportunityType || '')}</td>
+              <td>${escapeHtml(r.potential || '')}</td>
+              <td>${escapeHtml([r.contactName, r.phone].filter(Boolean).join(' • '))}</td>
+              <td>${escapeHtml(r.nextAction || '')}${r.nextActionDate ? '<br>' + escapeHtml(r.nextActionDate) : ''}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function openReportRow(kind, id) {
+  if (kind === 'Empresa') {
+    const c = companiesList.find(item => String(item.id) === String(id));
+    if (c) openCompanyModal(c);
     return;
   }
-  
-  // Agrupar por tipo
-  if (competitors.length > 0) {
-    const competitorGroups = {};
-    competitors.forEach(c => {
-      const name = c.competitorName || c.name;
-      if (!competitorGroups[name]) competitorGroups[name] = [];
-      competitorGroups[name].push(c);
-    });
-    
-    html += `<div class="report-card"><div class="report-title">🏆 CONCORRENTES</div>`;
-    for (const [compName, comps] of Object.entries(competitorGroups).sort((a,b) => b[1].length - a[1].length)) {
-      html += `<div style="margin-bottom:12px"><strong>📍 ${compName}</strong> <span class="badge badge-competitor">${comps.length} ocorrência(s)</span></div>`;
-      comps.forEach(c => {
-        html += `<div class="company-row" onclick='openCompanyModal(${JSON.stringify(c).replace(/'/g, "\\'")})'>
-          <div><span style="font-weight:500">${c.name}</span><br><span style="font-size:11px;color:#64748b">${c.address?.substring(0, 60) || ''}</span></div>
-          <div><span class="badge badge-location">${extractLocationDetails(c.address).city || 'Local não informado'}</span></div>
-        </div>`;
-      });
-    }
-    html += `</div>`;
-  }
-  
-  if (customers.length > 0) {
-    html += `<div class="report-card"><div class="report-title">✅ CLIENTES</div>`;
-    customers.forEach(c => {
-      html += `<div class="company-row" onclick='openCompanyModal(${JSON.stringify(c).replace(/'/g, "\\'")})'>
-        <div><span style="font-weight:500">${c.name}</span><br><span style="font-size:11px;color:#64748b">${c.system || 'Sem sistema'} | ${c.counter || 'Sem contador'}</span></div>
-        <div><span class="badge badge-client">${c.system || 'Sem sistema'}</span></div>
-      </div>`;
-    });
-    html += `</div>`;
-  }
-  
-  if (noSystem.length > 0) {
-    html += `<div class="report-card"><div class="report-title">❌ EMPRESAS SEM SISTEMA</div>`;
-    noSystem.forEach(c => {
-      const type = c.isCustomer ? 'Cliente' : (c.isExClient ? 'Ex-Cliente' : (c.isCompetitor ? 'Concorrente' : 'Não classificado'));
-      html += `<div class="company-row" onclick='openCompanyModal(${JSON.stringify(c).replace(/'/g, "\\'")})'>
-        <div><span style="font-weight:500">${c.name}</span><br><span style="font-size:11px;color:#64748b">${type}</span></div>
-        <div><span class="badge badge-nosystem">Sem Sistema</span></div>
-      </div>`;
-    });
-    html += `</div>`;
-  }
-  
-  resultsDiv.innerHTML = html;
+  focusCheckpoint(id);
+}
+
+function exportReportCsv() {
+  const rows = filterReportRows(buildReportRows());
+  const headers = ['Tipo','Empresa','Status','Segmento','Rua','Bairro','Cidade','Estado','Endereco','Sistema/Concorrente','Oportunidade','Potencial','Prioridade','Contato','Telefone','Instagram','Proxima Acao','Data Proxima Acao','Origem','Data','Observacoes'];
+  const csvRows = [headers];
+  rows.forEach(r => csvRows.push([r.kind,r.companyName,r.status,r.segment,r.street,r.neighborhood,r.city,r.state,r.address,r.system,r.opportunityType,r.potential,r.priority,r.contactName,r.phone,r.instagramHandle,r.nextAction,r.nextActionDate,r.source,r.date,r.notes]));
+  const csv = csvRows.map(row => row.map(value => '"' + String(value ?? '').replaceAll('"','""') + '"').join(';')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type:'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `marketmap-relatorio-360-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 // ========== LISTA DE CONCORRENTES ==========
@@ -2231,6 +2724,7 @@ function switchTab(tab, btn) {
   if (tab === 'market') updateMarketShare();
   if (tab === 'intelligence') updateIntelligenceDashboard();
   if (tab === 'instagram') updateInstagramLeads();
+  if (tab === 'checkpoints') updateCheckpointModule();
   if (tab === 'reports') updateReports();
   if (tab === 'competitors') updateCompetitorsList();
   if (tab === 'admin' && currentUserRole === 'diretor') loadAdminPanel();
@@ -2258,7 +2752,13 @@ auth.onAuthStateChanged(user => {
       companiesUnsubscribe();
       companiesUnsubscribe = null;
     }
+    if (checkpointsUnsubscribe) {
+      checkpointsUnsubscribe();
+      checkpointsUnsubscribe = null;
+    }
     companiesList = [];
+    checkpointsList = [];
+    lastCheckpointPosition = null;
     currentListMode = 'saved';
     currentListFilter = 'all';
     document.getElementById('screen-app').classList.remove('active');
